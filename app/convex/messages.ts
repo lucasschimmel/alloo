@@ -1,33 +1,30 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 async function getMembership(
-  ctx: { db: any },
-  conversationId: any,
-  userId: any
+  ctx: QueryCtx | MutationCtx,
+  conversationId: Id<"conversations">,
+  userId: Id<"users">
 ) {
   const members = await ctx.db
     .query("conversationMembers")
-    .withIndex("by_conversation", (q: any) =>
-      q.eq("conversationId", conversationId)
-    )
+    .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
     .collect();
-  return members.find((m: any) => m.userId === userId) ?? null;
+  return members.find((m) => m.userId === userId) ?? null;
 }
 
 async function getTypingEntry(
-  ctx: { db: any },
-  conversationId: any,
-  userId: any
+  ctx: QueryCtx | MutationCtx,
+  conversationId: Id<"conversations">,
+  userId: Id<"users">
 ) {
   const entries = await ctx.db
     .query("typingIndicators")
-    .withIndex("by_conversation", (q: any) =>
-      q.eq("conversationId", conversationId)
-    )
+    .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
     .collect();
-  return entries.find((e: any) => e.userId === userId) ?? null;
+  return entries.find((e) => e.userId === userId) ?? null;
 }
 
 export const list = query({
@@ -41,26 +38,41 @@ export const list = query({
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_conversation", (q: any) =>
+      .withIndex("by_conversation", (q) =>
         q.eq("conversationId", args.conversationId)
       )
       .order("asc")
       .collect();
 
+    // Deduplicate sender lookups
+    const senderCache = new Map<string, {
+      _id: Id<"users">;
+      username?: string;
+      name?: string;
+      image?: string;
+    } | null>();
+
     const messagesWithSender = await Promise.all(
-      messages.map(async (msg: any) => {
-        const sender = await ctx.db.get(msg.senderId);
+      messages.map(async (msg) => {
+        const senderId = msg.senderId as Id<"users">;
+        if (!senderCache.has(senderId)) {
+          const sender = await ctx.db.get(senderId);
+          senderCache.set(
+            senderId,
+            sender
+              ? {
+                  _id: sender._id as Id<"users">,
+                  username: sender.username,
+                  name: sender.name,
+                  image: sender.image,
+                }
+              : null
+          );
+        }
         return {
           ...msg,
-          sender: sender
-            ? {
-                _id: sender._id,
-                username: sender.username,
-                name: sender.name,
-                image: sender.image,
-              }
-            : null,
-          isOwn: msg.senderId === userId,
+          sender: senderCache.get(senderId) ?? null,
+          isOwn: senderId === userId,
         };
       })
     );
@@ -137,18 +149,18 @@ export const getTypingUsers = query({
     const now = Date.now();
     const indicators = await ctx.db
       .query("typingIndicators")
-      .withIndex("by_conversation", (q: any) =>
+      .withIndex("by_conversation", (q) =>
         q.eq("conversationId", args.conversationId)
       )
       .collect();
 
     const activeTypers = indicators.filter(
-      (i: any) => i.userId !== userId && i.expiresAt > now
+      (i) => i.userId !== userId && i.expiresAt > now
     );
 
     const users = await Promise.all(
-      activeTypers.map(async (i: any) => {
-        const user = await ctx.db.get(i.userId);
+      activeTypers.map(async (i) => {
+        const user = await ctx.db.get(i.userId as Id<"users">);
         return user?.username ?? user?.name ?? "Someone";
       })
     );
