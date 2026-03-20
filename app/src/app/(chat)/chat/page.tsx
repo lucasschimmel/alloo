@@ -37,7 +37,7 @@ export default function ChatPage() {
   }, []);
 
   return (
-    <>
+    <div className="flex h-screen overflow-hidden">
       <div
         className={`w-full md:w-80 md:block border-r border-border flex-shrink-0 ${
           mobileShowChat ? "hidden" : "block"
@@ -60,6 +60,6 @@ export default function ChatPage() {
           <EmptyState />
         )}
       </div>
-    </>
+    </div>
   );
 }

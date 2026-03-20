@@ -50,5 +50,5 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) return null;
 
-  return <div className="flex h-screen overflow-hidden">{children}</div>;
+  return <>{children}</>;
 }
