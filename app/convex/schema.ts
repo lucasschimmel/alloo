@@ -9,10 +9,13 @@ export default defineSchema({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     username: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    bio: v.optional(v.string()),
     image: v.optional(v.string()),
     emailVerificationTime: v.optional(v.float64()),
     isOnline: v.optional(v.boolean()),
     lastSeenAt: v.optional(v.float64()),
+    onboardingCompleted: v.optional(v.boolean()),
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"]),

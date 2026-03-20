@@ -14,7 +14,8 @@ export const currentUser = query({
 export const updateProfile = mutation({
   args: {
     username: v.string(),
-    name: v.optional(v.string()),
+    displayName: v.optional(v.string()),
+    bio: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -25,6 +26,12 @@ export const updateProfile = mutation({
     }
     if (!/^[a-zA-Z0-9_]+$/.test(args.username)) {
       throw new Error("Username can only contain letters, numbers, and underscores");
+    }
+    if (args.bio && args.bio.length > 160) {
+      throw new Error("Bio must be 160 characters or less");
+    }
+    if (args.displayName && args.displayName.length > 50) {
+      throw new Error("Display name must be 50 characters or less");
     }
 
     const existing = await ctx.db
@@ -38,8 +45,18 @@ export const updateProfile = mutation({
 
     await ctx.db.patch(userId, {
       username: args.username,
-      name: args.name,
+      displayName: args.displayName,
+      bio: args.bio,
     });
+  },
+});
+
+export const completeOnboarding = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await ctx.db.patch(userId, { onboardingCompleted: true });
   },
 });
 
@@ -74,6 +91,7 @@ export const searchUsers = query({
       .map((u) => ({
         _id: u._id,
         username: u.username,
+        displayName: u.displayName,
         name: u.name,
         image: u.image,
         isOnline: u.isOnline ?? false,

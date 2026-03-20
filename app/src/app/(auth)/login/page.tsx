@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/chat");
+    if (isAuthenticated) router.replace("/chat"); // chat page handles profile/onboarding redirects
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

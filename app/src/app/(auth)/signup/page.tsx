@@ -14,12 +14,12 @@ export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.replace("/chat");
+    if (isAuthenticated) router.replace("/setup-profile");
   }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,10 +30,14 @@ export default function SignupPage() {
       setError("Le mot de passe doit contenir au moins 8 caractères");
       return;
     }
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
 
     setLoading(true);
     try {
-      await signIn("password", { email, password, name, flow: "signUp" });
+      await signIn("password", { email, password, flow: "signUp" });
     } catch {
       setError("Cet email est déjà utilisé ou une erreur est survenue");
     } finally {
@@ -55,42 +59,36 @@ export default function SignupPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary">Alloo</h1>
           <p className="mt-2 text-muted-foreground">
-            Crée ton compte en 15 secondes
+            Crée ton compte en quelques secondes
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Input
-              type="text"
-              placeholder="Nom"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div>
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <Input
-              type="password"
-              placeholder="Mot de passe (min. 8 caractères)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder="Mot de passe (min. 8 caractères)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+          <Input
+            type="password"
+            placeholder="Confirmer le mot de passe"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={8}
+          />
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Création..." : "Créer mon compte"}
