@@ -20,21 +20,24 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    // Initial ping
     setOnlineStatus({ isOnline: true });
 
-    const handleBeforeUnload = () => {
-      setOnlineStatus({ isOnline: false });
-    };
+    // Heartbeat every 30s to keep lastSeenAt fresh
+    const heartbeat = setInterval(() => {
+      if (!document.hidden) {
+        setOnlineStatus({ isOnline: true });
+      }
+    }, 30_000);
 
     const handleVisibilityChange = () => {
       setOnlineStatus({ isOnline: !document.hidden });
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      clearInterval(heartbeat);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       setOnlineStatus({ isOnline: false });
     };

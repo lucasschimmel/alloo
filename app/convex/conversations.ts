@@ -25,7 +25,11 @@ async function getUserInfo(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
     name: user.name,
     bio: user.bio,
     image: user.image,
-    isOnline: user.isOnline ?? false,
+    // Consider online if lastSeenAt is within 60s (heartbeat is 30s)
+    isOnline:
+      user.isOnline === true &&
+      user.lastSeenAt != null &&
+      Date.now() - user.lastSeenAt < 60_000,
     lastSeenAt: user.lastSeenAt,
   };
 }
