@@ -36,6 +36,15 @@ export const list = query({
     const membership = await getMembership(ctx, args.conversationId, userId);
     if (!membership) return [];
 
+    // Get other members' lastReadAt for read receipts
+    const allMembers = await ctx.db
+      .query("conversationMembers")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .collect();
+    const otherMembers = allMembers.filter((m) => m.userId !== userId);
+
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>
@@ -71,10 +80,20 @@ export const list = query({
               : null
           );
         }
+        const isOwn = senderId === userId;
+        // Read receipt: check if all other members have read past this message
+        const isRead = isOwn
+          ? otherMembers.length > 0 &&
+            otherMembers.every(
+              (m) => m.lastReadAt != null && m.lastReadAt >= msg._creationTime
+            )
+          : false;
+
         return {
           ...msg,
           sender: senderCache.get(senderId) ?? null,
-          isOwn: senderId === userId,
+          isOwn,
+          isRead,
         };
       })
     );

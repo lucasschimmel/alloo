@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatMessageTime } from "@/lib/format-time";
+import { Check, CheckCheck } from "lucide-react";
 
 interface ChatBubbleProps {
   content: string;
@@ -16,6 +17,7 @@ interface ChatBubbleProps {
     image?: string;
   } | null;
   isOwn: boolean;
+  isRead?: boolean;
   timestamp: number;
   showSender: boolean;
   onSenderClick?: () => void;
@@ -25,6 +27,7 @@ export const ChatBubble = memo(function ChatBubble({
   content,
   sender,
   isOwn,
+  isRead,
   timestamp,
   showSender,
   onSenderClick,
@@ -76,14 +79,21 @@ export const ChatBubble = memo(function ChatBubble({
         >
           {content}
         </div>
-        <p
+        <div
           className={cn(
-            "px-1 text-[10px] text-muted-foreground",
-            isOwn ? "text-right" : "text-left"
+            "flex items-center gap-1 px-1",
+            isOwn ? "justify-end" : "justify-start"
           )}
         >
-          {time}
-        </p>
+          <span className="text-[10px] text-muted-foreground">{time}</span>
+          {isOwn && (
+            isRead ? (
+              <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+            ) : (
+              <Check className="h-3.5 w-3.5 text-muted-foreground" />
+            )
+          )}
+        </div>
       </div>
     </motion.div>
   );

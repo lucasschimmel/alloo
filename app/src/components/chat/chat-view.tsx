@@ -143,6 +143,7 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
                   content={msg.content}
                   sender={msg.sender}
                   isOwn={msg.isOwn}
+                  isRead={msg.isRead}
                   timestamp={msg._creationTime}
                   showSender={conversation.type === "group"}
                   onSenderClick={
