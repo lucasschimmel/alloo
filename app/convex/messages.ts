@@ -48,6 +48,7 @@ export const list = query({
     const senderCache = new Map<string, {
       _id: Id<"users">;
       username?: string;
+      displayName?: string;
       name?: string;
       image?: string;
     } | null>();
@@ -63,6 +64,7 @@ export const list = query({
               ? {
                   _id: sender._id as Id<"users">,
                   username: sender.username,
+                  displayName: sender.displayName,
                   name: sender.name,
                   image: sender.image,
                 }

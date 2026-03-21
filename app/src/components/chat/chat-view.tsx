@@ -7,11 +7,13 @@ import { ChatBubble } from "./chat-bubble";
 import { ChatInput } from "./chat-input";
 import { TypingIndicator } from "./typing-indicator";
 import { GroupInfo } from "./group-info";
+import { UserProfileDialog } from "./user-profile-dialog";
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, AlertCircle } from "lucide-react";
+import { formatLastSeen } from "@/lib/format-time";
 
 interface ChatViewProps {
   conversationId: Id<"conversations">;
@@ -25,6 +27,7 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
   const { user } = useCurrentUser();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [profileUser, setProfileUser] = useState<any>(null);
 
   useEffect(() => {
     if (messages && messages.length > 0) {
@@ -36,7 +39,6 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
     }
   }, [messages, conversationId, markAsRead]);
 
-  // Loading state (query returns undefined)
   if (conversation === undefined) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -45,7 +47,6 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
     );
   }
 
-  // Not found or not a member (query returns null)
   if (conversation === null) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
@@ -63,11 +64,22 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
     );
   }
 
-  // Find the other user in DMs using current user's ID (not createdBy)
   const otherDmMember =
     conversation.type === "dm" && user
       ? conversation.members.find((m: any) => m && m._id !== user._id)
       : null;
+
+  const headerDisplayName =
+    conversation.type === "dm" && otherDmMember
+      ? (otherDmMember as any).displayName ?? otherDmMember.username ?? conversation.displayName
+      : conversation.displayName;
+
+  const statusText =
+    conversation.type === "dm" && otherDmMember
+      ? otherDmMember.isOnline
+        ? "En ligne"
+        : formatLastSeen((otherDmMember as any).lastSeenAt)
+      : `${conversation.members.length} membres`;
 
   return (
     <div className="flex h-full flex-col">
@@ -76,40 +88,43 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 md:hidden"
+          className="md:hidden"
           onClick={onBack}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <Avatar className="h-9 w-9">
-          <AvatarFallback className="bg-primary/10 text-primary text-sm">
-            {conversation.type === "group" ? (
-              <Users className="h-4 w-4" />
-            ) : (
-              (conversation.displayName ?? "?")[0]?.toUpperCase()
-            )}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold">
-            {conversation.displayName}
-          </h2>
-          {conversation.type === "group" && (
-            <p className="text-xs text-muted-foreground">
-              {conversation.members.length} membres
-            </p>
-          )}
-          {conversation.type === "dm" && otherDmMember && (
-            <p className="text-xs text-muted-foreground">
-              {otherDmMember.isOnline ? "En ligne" : "Hors ligne"}
-            </p>
-          )}
-        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (conversation.type === "dm" && otherDmMember) {
+              setProfileUser(otherDmMember);
+            } else if (conversation.type === "group") {
+              setShowGroupInfo(!showGroupInfo);
+            }
+          }}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
+          <UserAvatar
+            src={conversation.type === "dm" ? (otherDmMember as any)?.image : undefined}
+            fallback={headerDisplayName ?? "?"}
+            isOnline={otherDmMember?.isOnline}
+            isGroup={conversation.type === "group"}
+          />
+          <div className="min-w-0 text-left">
+            <h2 className="truncate text-sm font-semibold">
+              {headerDisplayName}
+            </h2>
+            <p className="text-xs text-muted-foreground">{statusText}</p>
+          </div>
+        </button>
+
+        <div className="flex-1" />
+
         {conversation.type === "group" && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
             onClick={() => setShowGroupInfo(!showGroupInfo)}
           >
             <Users className="h-4 w-4" />
@@ -130,6 +145,11 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
                   isOwn={msg.isOwn}
                   timestamp={msg._creationTime}
                   showSender={conversation.type === "group"}
+                  onSenderClick={
+                    !msg.isOwn && msg.sender
+                      ? () => setProfileUser(msg.sender)
+                      : undefined
+                  }
                 />
               ))}
             </div>
@@ -143,9 +163,19 @@ export function ChatView({ conversationId, onBack }: ChatViewProps) {
           <GroupInfo
             conversation={conversation}
             onClose={() => setShowGroupInfo(false)}
+            onMemberClick={(member: any) => setProfileUser(member)}
           />
         )}
       </div>
+
+      {/* User Profile Dialog */}
+      <UserProfileDialog
+        user={profileUser}
+        open={!!profileUser}
+        onOpenChange={(open) => {
+          if (!open) setProfileUser(null);
+        }}
+      />
     </div>
   );
 }

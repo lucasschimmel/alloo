@@ -1,12 +1,11 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { useMutation } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,9 +16,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { MessageSquarePlus, Users, Search, Settings, Moon, Sun, LogOut } from "lucide-react";
+import { MessageSquarePlus, Users, Search, Moon, Sun, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { formatLastSeen } from "@/lib/format-time";
 
 interface SidebarProps {
   selectedConversation: Id<"conversations"> | null;
@@ -49,7 +49,6 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="h-8 w-8"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
@@ -71,56 +70,63 @@ export function Sidebar({
               Aucune conversation. Commence par envoyer un message !
             </p>
           )}
-          {conversations?.map((conv) => (
-            <button
-              key={conv!._id}
-              onClick={() => onSelectConversation(conv!._id)}
-              className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted ${
-                selectedConversation === conv!._id ? "bg-muted" : ""
-              }`}
-            >
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                  {conv!.type === "group" ? (
-                    <Users className="h-4 w-4" />
-                  ) : (
-                    (conv!.displayName ?? "?")[0]?.toUpperCase()
-                  )}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="truncate text-sm font-medium">
-                    {conv!.displayName}
-                  </span>
-                  {conv!.unreadCount > 0 && (
-                    <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
-                      {conv!.unreadCount}
+          {conversations?.map((conv) => {
+            const otherMember =
+              conv!.type === "dm"
+                ? conv!.members.find((m: any) => m && m._id !== user?._id)
+                : null;
+
+            return (
+              <button
+                key={conv!._id}
+                onClick={() => onSelectConversation(conv!._id)}
+                className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted ${
+                  selectedConversation === conv!._id ? "bg-muted" : ""
+                }`}
+              >
+                <UserAvatar
+                  src={otherMember?.image}
+                  fallback={conv!.displayName ?? "?"}
+                  isOnline={otherMember?.isOnline}
+                  isGroup={conv!.type === "group"}
+                  size="md"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="truncate text-sm font-medium">
+                      {conv!.type === "dm" && otherMember
+                        ? (otherMember as any).displayName ?? otherMember.username ?? conv!.displayName
+                        : conv!.displayName}
                     </span>
+                    {(conv!.unreadCount ?? 0) > 0 && (
+                      <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
+                        {conv!.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  {conv!.lastMessage && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {conv!.lastMessage.content}
+                    </p>
                   )}
                 </div>
-                {conv!.lastMessage && (
-                  <p className="truncate text-xs text-muted-foreground">
-                    {conv!.lastMessage.content}
-                  </p>
-                )}
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </ScrollArea>
 
       {/* User Footer */}
       <div className="flex items-center gap-3 border-t border-border p-3">
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-            {(user?.username ?? user?.name ?? "?")[0]?.toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          src={user?.image}
+          fallback={user?.displayName ?? user?.username ?? user?.name ?? "?"}
+          size="sm"
+        />
         <span className="flex-1 truncate text-sm font-medium">
-          {user?.username ?? user?.name ?? "Utilisateur"}
+          {user?.displayName ?? user?.username ?? user?.name ?? "Utilisateur"}
         </span>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => signOut()}>
+        <Button variant="ghost" size="icon" onClick={() => signOut()}>
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
@@ -151,7 +157,7 @@ function NewDMDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger
-        render={<Button variant="ghost" size="icon" className="h-8 w-8" />}
+        render={<Button variant="ghost" size="icon" />}
       >
         <MessageSquarePlus className="h-4 w-4" />
       </DialogTrigger>
@@ -170,21 +176,26 @@ function NewDMDialog({
             />
           </div>
           <div className="max-h-60 space-y-1 overflow-y-auto">
-            {results?.map((user) => (
+            {results?.map((u) => (
               <button
-                key={user._id}
-                onClick={() => handleSelect(user._id)}
+                key={u._id}
+                onClick={() => handleSelect(u._id)}
                 className="flex w-full items-center gap-3 rounded-lg p-2 hover:bg-muted"
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                    {(user.username ?? "?")[0]?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{user.username}</span>
-                  {user.isOnline && (
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                <UserAvatar
+                  src={u.image}
+                  fallback={u.displayName ?? u.username ?? "?"}
+                  isOnline={u.isOnline}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-medium">
+                    {u.displayName ?? u.name ?? u.username}
+                  </p>
+                  {u.username && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      @{u.username}
+                    </p>
                   )}
                 </div>
               </button>
@@ -231,7 +242,7 @@ function NewGroupDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger
-        render={<Button variant="ghost" size="icon" className="h-8 w-8" />}
+        render={<Button variant="ghost" size="icon" />}
       >
         <Users className="h-4 w-4" />
       </DialogTrigger>

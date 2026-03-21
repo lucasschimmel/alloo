@@ -3,18 +3,22 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { formatMessageTime } from "@/lib/format-time";
 
 interface ChatBubbleProps {
   content: string;
   sender: {
     _id: string;
     username?: string;
+    displayName?: string;
     name?: string;
     image?: string;
   } | null;
   isOwn: boolean;
   timestamp: number;
   showSender: boolean;
+  onSenderClick?: () => void;
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -23,26 +27,44 @@ export const ChatBubble = memo(function ChatBubble({
   isOwn,
   timestamp,
   showSender,
+  onSenderClick,
 }: ChatBubbleProps) {
-  const time = new Date(timestamp).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const time = formatMessageTime(timestamp);
+  const senderDisplayName = sender?.displayName ?? sender?.name ?? sender?.username ?? "Inconnu";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15 }}
-      className={cn("flex", isOwn ? "justify-end" : "justify-start")}
+      className={cn("flex gap-2", isOwn ? "justify-end" : "justify-start")}
     >
+      {/* Avatar for received messages in groups */}
+      {showSender && !isOwn && sender && (
+        <button
+          type="button"
+          onClick={onSenderClick}
+          className="mt-auto flex-shrink-0 hover:opacity-80 transition-opacity"
+        >
+          <UserAvatar
+            src={sender.image}
+            fallback={senderDisplayName}
+            size="xs"
+          />
+        </button>
+      )}
+
       <div
-        className={cn("max-w-[75%] space-y-0.5", isOwn ? "items-end" : "items-start")}
+        className={cn("max-w-[70%] space-y-0.5", isOwn ? "items-end" : "items-start")}
       >
         {showSender && !isOwn && sender && (
-          <p className="ml-3 text-xs font-medium text-muted-foreground">
-            {sender.username ?? sender.name ?? "Inconnu"}
-          </p>
+          <button
+            type="button"
+            onClick={onSenderClick}
+            className="ml-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {senderDisplayName}
+          </button>
         )}
         <div
           className={cn(

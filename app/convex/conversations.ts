@@ -21,9 +21,12 @@ async function getUserInfo(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
   return {
     _id: user._id,
     username: user.username,
+    displayName: user.displayName,
     name: user.name,
+    bio: user.bio,
     image: user.image,
     isOnline: user.isOnline ?? false,
+    lastSeenAt: user.lastSeenAt,
   };
 }
 
