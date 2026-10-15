@@ -1,0 +1,177 @@
+@import "@fontsource-variable/figtree";
+@import "tailwindcss";
+
+:root {
+  --background: oklch(0.975 0.002 255);
+  --surface: #fff;
+  --canvas: oklch(0.968 0.003 255);
+  --foreground: oklch(0.21 0.017 260);
+  --muted: oklch(0.49 0.017 260);
+  --primary: oklch(0.55 0.21 262);
+  --subtle: oklch(0.955 0.022 260);
+  --border: oklch(0.922 0.005 255);
+  --danger: oklch(0.55 0.21 25);
+  --online: oklch(0.57 0.16 152);
+  --radius: 12px;
+  --bubble: 18px;
+  --shadow: 0 16px 60px -24px #17234030;
+  font-family: "Figtree Variable", sans-serif;
+  color: var(--foreground);
+  background: var(--background);
+  font-synthesis: none;
+}
+:root[data-theme="dark"] {
+  --background: oklch(0.185 0.008 260);
+  --surface: oklch(0.212 0.009 260);
+  --canvas: oklch(0.165 0.008 260);
+  --foreground: oklch(0.955 0.003 260);
+  --muted: oklch(0.72 0.013 260);
+  --primary: oklch(0.62 0.19 262);
+  --subtle: oklch(0.28 0.045 262);
+  --border: oklch(1 0 0 / 12%);
+  --shadow: 0 16px 60px -24px #0009;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+}
+button:hover:not(:disabled) {
+  background: var(--subtle);
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1,
+h2,
+h3 {
+  letter-spacing: -0.04em;
+}
+p {
+  line-height: 1.7;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 13px;
+}
+.wordmark {
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: -1.8px;
+  color: var(--primary);
+}
+.wordmark-dot {
+  color: var(--foreground);
+}
+.button {
+  display: inline-flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  padding: 13px 21px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  background: var(--surface);
+  white-space: nowrap;
+}
+.button:hover {
+  text-decoration: none;
+  background: var(--subtle);
+}
+.primary {
+  background: var(--primary);
+  color: white;
+  border-color: transparent;
+}
+.primary:hover:not(:disabled) {
+  background: var(--primary);
+  filter: brightness(0.95);
+}
+.small-button {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+}
+.danger {
+  color: var(--danger);
+}
+.error {
+  color: var(--danger);
+  font-size: 14px;
+}
+.notice {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--subtle);
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  color: var(--muted);
+}
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--online);
+}

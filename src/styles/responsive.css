@@ -1,0 +1,147 @@
+@media (max-width: 1000px) {
+  .hero {
+    gap: 30px;
+    margin-top: 40px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .chat-preview {
+    grid-template-columns: 135px 1fr;
+  }
+  .preview-sidebar {
+    padding-inline: 5px;
+  }
+  .preview-person {
+    gap: 5px;
+  }
+  .preview-person small {
+    max-width: 75px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .benefits {
+    gap: 24px;
+  }
+  .workspace {
+    grid-template-columns: 270px 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .site-header {
+    padding: 22px;
+  }
+  .site-header nav > a:first-child {
+    display: none;
+  }
+  .hero {
+    display: flex;
+    flex-direction: column;
+    padding: 0 22px;
+    margin: 34px auto 48px;
+    gap: 40px;
+  }
+  .hero-copy {
+    align-self: stretch;
+  }
+  .hero h1 {
+    font-size: 52px;
+  }
+  .hero-copy > p {
+    max-width: 460px;
+  }
+  .preview-wrap {
+    width: 100%;
+    max-width: 520px;
+  }
+  .chat-preview {
+    grid-template-columns: 140px 1fr;
+  }
+  .benefits {
+    grid-template-columns: 1fr;
+    padding: 34px 24px;
+    gap: 32px;
+  }
+  .benefits-intro h2 br {
+    display: none;
+  }
+  .benefits article {
+    max-width: 480px;
+  }
+  .feature-icon {
+    margin-bottom: 10px;
+  }
+  .closing {
+    padding: 50px 24px;
+  }
+  .closing h2 {
+    font-size: 28px;
+  }
+  .site-footer {
+    padding: 24px;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .site-footer > span:nth-child(2) {
+    min-width: 70%;
+    font-size: 11px;
+  }
+  .workspace {
+    display: block;
+  }
+  .sidebar,
+  .conversation-pane {
+    height: 100dvh;
+  }
+  .workspace.has-conversation .sidebar {
+    display: none;
+  }
+  .workspace:not(.has-conversation) .conversation-pane {
+    display: none;
+  }
+  .mobile-back {
+    display: inline-flex;
+  }
+  .conversation-header {
+    padding: 12px;
+    gap: 8px;
+  }
+  .header-actions {
+    gap: 0;
+  }
+  .timeline {
+    padding: 14px;
+  }
+  .composer-area {
+    padding-inline: 12px;
+  }
+  .context-strip {
+    padding-inline: 12px;
+  }
+  .call-panel {
+    inset: 8px;
+    padding: 14px;
+  }
+  .call-stage .local-video {
+    width: 100px;
+  }
+  .auth-page {
+    padding: 24px 16px;
+  }
+  .auth-card {
+    padding: 26px;
+  }
+  .bubble {
+    max-width: 90%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: Accessibility preference must override component motion. */
+    scroll-behavior: auto !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Accessibility preference must override component motion. */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: Accessibility preference must override component motion. */
+    transition: none !important;
+  }
+}

@@ -1,48 +1,51 @@
 {
-	"name": "alloo",
-	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
-	"engines": {
-		"bun": ">=1.2.0"
-	},
-	"devEngines": {
-		"packageManager": {
-			"name": "bun",
-			"version": "^1.2.0"
-		}
-	},
-	"scripts": {
-		"dev": "turbo run dev",
-		"build": "turbo run build",
-		"start": "turbo run start",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"format": "biome format --write .",
-		"typecheck": "tsc --noEmit && turbo run typecheck",
-		"test": "turbo run test",
-		"test:watch": "turbo run test:watch",
-		"test:e2e": "playwright test",
-		"test:e2e:ui": "playwright test --ui",
-		"verify": "bun run lint && bun run typecheck && bun run test && bun run build",
-		"prepare": "husky"
-	},
-	"lint-staged": {
-		"*.{js,jsx,mjs,ts,tsx,mts,json,jsonc,css}": [
-			"biome check --write --no-errors-on-unmatched"
-		]
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.5.7",
-		"@commitlint/cli": "^21.2.1",
-		"@commitlint/config-conventional": "^21.2.0",
-		"@playwright/test": "^1.62.1",
-		"@types/node": "^26.1.2",
-		"husky": "^9.1.7",
-		"lint-staged": "^17.3.0",
-		"turbo": "^2.10.8",
-		"typescript": "^7.0.2"
-	}
+  "name": "alloo",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test:e2e": "playwright test",
+    "convex": "convex dev",
+    "verify": "bun run lint && bun run typecheck && bun run test && bun run build",
+    "test:mutation": "bun scripts/check-critical-mutations.ts"
+  },
+  "dependencies": {
+    "@auth/core": "0.41.3",
+    "@base-ui/react": "1.9.0",
+    "@convex-dev/auth": "0.0.96",
+    "@fontsource-variable/figtree": "5.3.0",
+    "@tanstack/react-router": "1.170.44",
+    "@tanstack/react-start": "1.169.2",
+    "@tanstack/react-virtual": "3.14.20",
+    "convex": "1.46.0",
+    "jpeg-js": "0.4.4",
+    "lucide-react": "1.57.0",
+    "pngjs": "7.0.0",
+    "qrcode.react": "4.2.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "xstate": "5.33.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "26.6.5",
+    "@types/pngjs": "6.0.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "convex-test": "0.0.62",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
 }

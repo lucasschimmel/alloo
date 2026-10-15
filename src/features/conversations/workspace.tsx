@@ -1,0 +1,251 @@
+import { useConvexConnectionState, useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { MessageCircle, Moon, Plus, Search, Settings, Sun } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "../../../convex/_generated/api";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { LIMITS } from "../../../shared/policy";
+import { Avatar } from "../../components/ui/avatar";
+import { Modal } from "../../components/ui/modal";
+import { explain } from "../../lib/errors";
+import { CallProvider } from "../calls/call-provider";
+import { Timeline } from "../messages/timeline";
+import { ProfileEditor } from "../profile/profile-editor";
+import { ConversationInfo } from "./conversation-info";
+import { NewConversation } from "./new-conversation";
+
+export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.conversations.list,
+    {},
+    { initialNumItems: 30 },
+  );
+  const [selected, setSelected] = useState<Id<"conversations"> | null>(null),
+    [creating, setCreating] = useState(false),
+    [settings, setSettings] = useState(false),
+    [info, setInfo] = useState(false),
+    [term, setTerm] = useState(""),
+    [toast, setToast] = useState(""),
+    [dark, setDark] = useState(false);
+  const detail = useQuery(api.conversations.details, selected ? { id: selected } : "skip"),
+    heartbeat = useMutation(api.presence.heartbeat),
+    join = useMutation(api.conversations.join),
+    connection = useConvexConnectionState();
+  const [session] = useState(() => crypto.randomUUID()),
+    lastTyping = useRef(0);
+  const notify = useCallback((text: string) => setToast(text), []);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 6000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  useEffect(() => {
+    const saved = localStorage.getItem("alloo-theme"),
+      isDark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    setDark(isDark);
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  }, []);
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get("invite");
+    if (!code) return;
+    void join({ code })
+      .then((id) => {
+        setSelected(id);
+        history.replaceState(null, "", "/app");
+      })
+      .catch((e) => notify(explain(e)));
+  }, [join, notify]);
+  useEffect(() => {
+    const beat = () =>
+      void heartbeat({
+        session,
+        conversationId: selected ?? undefined,
+        typing: false,
+        online: true,
+      }).catch((e) => notify(explain(e)));
+    beat();
+    const timer = setInterval(beat, LIMITS.heartbeatMs);
+    return () => {
+      clearInterval(timer);
+      void heartbeat({ session, typing: false, online: false }).catch(() => {
+        /* Lease expiry is the crash fallback; no private data is retained here. */
+      });
+    };
+  }, [heartbeat, session, selected, notify]);
+  function typing(value: boolean) {
+    if (value && Date.now() - lastTyping.current < 2000) return;
+    lastTyping.current = Date.now();
+    void heartbeat({
+      session,
+      conversationId: selected ?? undefined,
+      typing: value,
+      online: true,
+    }).catch((e) => notify(explain(e)));
+  }
+  const conversations = results.filter((c) => c.title.toLowerCase().includes(term.toLowerCase()));
+  return (
+    <CallProvider userId={profile.userId} notify={notify}>
+      <div className={`workspace ${selected ? "has-conversation" : ""}`}>
+        <aside className="sidebar">
+          <div className="sidebar-top">
+            <a className="wordmark" href="/">
+              Alloo.
+            </a>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={dark ? "Passer au thème clair" : "Passer au thème sombre"}
+              onClick={() => {
+                const next = !dark;
+                setDark(next);
+                document.documentElement.dataset.theme = next ? "dark" : "light";
+                localStorage.setItem("alloo-theme", next ? "dark" : "light");
+              }}
+            >
+              {dark ? <Sun size={19} /> : <Moon size={19} />}
+            </button>
+          </div>
+          <div className="sidebar-tools">
+            <label>
+              <span className="sr-only">Rechercher une conversation</span>
+              <input
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Rechercher une conversation"
+              />
+            </label>
+          </div>
+          <div className="sidebar-label">
+            <span>VOS CONVERSATIONS</span>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Nouvelle conversation"
+              onClick={() => setCreating(true)}
+            >
+              <Plus size={19} />
+            </button>
+          </div>
+          <div className="conversation-list">
+            {status === "LoadingFirstPage" && <p className="muted small">Chargement…</p>}
+            {conversations.map((c) => (
+              <button
+                type="button"
+                key={c._id}
+                className={`conversation-row ${selected === c._id ? "selected" : ""}`}
+                aria-current={selected === c._id ? "page" : undefined}
+                onClick={() => setSelected(c._id)}
+              >
+                <Avatar name={c.title} userId={c.peerId} />
+                <div className="conversation-summary">
+                  <strong>{c.title}</strong>
+                  <p>{c.preview}</p>
+                </div>
+                <div className="row-meta">
+                  <time>
+                    {new Date(c.updatedAt).toLocaleTimeString("fr", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  {c.unread > 0 && (
+                    <span className="unread">{c.unread >= 99 ? "99+" : c.unread}</span>
+                  )}
+                </div>
+              </button>
+            ))}
+            {status !== "LoadingFirstPage" && !conversations.length && (
+              <div className="empty-chat">
+                <Search size={24} />
+                <p>{term ? "Aucune conversation trouvée." : "Votre prochain Alloo vous attend."}</p>
+                <button type="button" onClick={() => setCreating(true)}>
+                  Commencer une conversation
+                </button>
+              </div>
+            )}
+            {status === "CanLoadMore" && (
+              <button type="button" className="load-more" onClick={() => loadMore(30)}>
+                Voir plus
+              </button>
+            )}
+          </div>
+          <div className="account-footer">
+            <Avatar name={profile.name} userId={profile.userId} />
+            <div>
+              <strong>{profile.name}</strong>
+              <small>@{profile.username}</small>
+            </div>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Mon compte"
+              onClick={() => setSettings(true)}
+            >
+              <Settings size={19} />
+            </button>
+          </div>
+        </aside>
+        <main className="conversation-pane">
+          {!connection.isWebSocketConnected && (
+            <div className="connection-banner" role="status">
+              Reconnexion en cours… Vos messages enregistrés restent disponibles.
+            </div>
+          )}
+          {selected ? (
+            detail ? (
+              <Timeline
+                key={selected}
+                detail={detail}
+                userId={profile.userId}
+                onBack={() => setSelected(null)}
+                onInfo={() => setInfo(true)}
+                notify={notify}
+                typing={typing}
+              />
+            ) : (
+              <div className="empty-chat">Chargement de la conversation…</div>
+            )
+          ) : (
+            <div className="empty-chat">
+              <MessageCircle size={52} strokeWidth={1.3} />
+              <span className="eyebrow">LES CONVERSATIONS QUI COMPTENT</span>
+              <h1>
+                Un petit Alloo,
+                <br />
+                ça change la journée.
+              </h1>
+              <p>Choisissez une conversation ou retrouvez quelqu’un. Le reste peut attendre.</p>
+              <button type="button" className="button primary" onClick={() => setCreating(true)}>
+                <Plus size={17} /> Nouvelle conversation
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
+      <NewConversation open={creating} onClose={() => setCreating(false)} onSelect={setSelected} />
+      <Modal
+        open={settings}
+        onClose={() => setSettings(false)}
+        title="Votre compte"
+        description="Un profil qui vous ressemble."
+      >
+        <ProfileEditor profile={profile} onDone={() => setSettings(false)} />
+      </Modal>
+      {info && selected && (
+        <ConversationInfo
+          id={selected}
+          userId={profile.userId}
+          onClose={() => setInfo(false)}
+          onLeave={() => {
+            setInfo(false);
+            setSelected(null);
+          }}
+        />
+      )}
+      {toast && (
+        <div role="status" className="toast">
+          {toast}
+        </div>
+      )}
+    </CallProvider>
+  );
+}
