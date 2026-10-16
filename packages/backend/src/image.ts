@@ -1,7 +1,7 @@
 import { inflateSync } from "node:zlib";
+import { LIMITS } from "@alloo/shared/policy";
 import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
-import { LIMITS } from "./policy";
 
 function validatePng(input: Buffer) {
   if (

@@ -7,15 +7,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "convex": "1.46.0",
-    "emoji-regex": "11.0.0",
-    "jpeg-js": "0.4.4",
-    "pngjs": "7.0.0"
+    "emoji-regex": "11.0.0"
   },
   "exports": {
-    "./*": "./src/*.ts"
+    "./attachments": "./src/attachments.ts",
+    "./message-label": "./src/message-label.ts",
+    "./message-request": "./src/message-request.ts",
+    "./offline": "./src/offline.ts",
+    "./policy": "./src/policy.ts",
+    "./provider-avatar": "./src/provider-avatar.ts",
+    "./push": "./src/push.ts",
+    "./release": "./src/release.ts",
+    "./http": "./src/http.ts"
   },
   "devDependencies": {
-    "@types/pngjs": "6.0.5"
+    "vitest": "5.0.4"
   }
 }

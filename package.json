@@ -21,24 +21,26 @@
     "format": "biome check --write .",
     "test:e2e": "playwright test",
     "convex": "convex dev",
-    "verify": "bun run lint && bun run typecheck && bun run test && bun run build",
+    "verify": "bun run check:architecture && bun run lint && bun run typecheck && bun run test && bun run build",
     "test:mutation": "bun scripts/check-critical-mutations.ts",
     "release:check": "bun scripts/check-release.ts",
     "deploy": "bun run release:check && bun run --sequential --filter \"@alloo/web\" --filter \"@alloo/landing\" deploy",
-    "deploy:dry-run": "bun run build && bun run --sequential --filter \"@alloo/web\" --filter \"@alloo/landing\" deploy:dry-run"
+    "deploy:dry-run": "bun run build && bun run --sequential --filter \"@alloo/web\" --filter \"@alloo/landing\" deploy:dry-run",
+    "check:architecture": "bun scripts/check-architecture.ts"
   },
   "devDependencies": {
+    "@alloo/shared": "workspace:*",
+    "@babel/parser": "8.0.7",
     "@biomejs/biome": "2.5.15",
     "@playwright/test": "1.64.1",
     "@types/node": "26.6.5",
     "@types/pngjs": "6.0.5",
+    "convex": "1.46.0",
     "convex-test": "0.0.62",
     "fake-indexeddb": "6.2.5",
+    "pngjs": "7.0.0",
     "typescript": "7.0.2",
     "vite": "8.3.4",
-    "vitest": "5.0.4",
-    "convex": "1.46.0",
-    "pngjs": "7.0.0",
-    "@alloo/shared": "workspace:*"
+    "vitest": "5.0.4"
   }
 }

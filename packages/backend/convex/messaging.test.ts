@@ -1,22 +1,11 @@
-import { convexTest } from "convex-test";
 import { afterEach, expect, it, vi } from "vitest";
+import { setupUsers } from "../test-support";
 import { api, internal } from "./_generated/api";
-import schema from "./schema";
 
 afterEach(() => vi.useRealTimers());
 const modules = import.meta.glob("./**/*.ts");
 async function setup() {
-  const t = convexTest(schema, modules);
-  const ids = await t.run(async (ctx) => {
-    const ids = [];
-    for (const name of ["Alice", "Bob", "Carol"]) {
-      const id = await ctx.db.insert("users", { name });
-      await ctx.db.insert("profiles", { userId: id, name, username: name.toLowerCase(), bio: "" });
-      ids.push(id);
-    }
-    return ids;
-  });
-  const [a, b, c] = ids.map((id) => t.withIdentity({ subject: id }));
+  const { t, ids, a, b, c } = await setupUsers(modules);
   const id = await a.mutation(api.conversations.createDM, { targetId: ids[1] });
   const messageId = await a.mutation(api.messages.send, {
     id,

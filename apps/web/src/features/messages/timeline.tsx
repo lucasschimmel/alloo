@@ -1,26 +1,24 @@
 import { api } from "@alloo/backend/api";
 import type { Id } from "@alloo/backend/dataModel";
 import { attachmentName } from "@alloo/shared/attachments";
-import { dateLabel, lastSeenLabel, sameDay } from "@alloo/shared/message-label";
 import { LIMITS } from "@alloo/shared/policy";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import type { FunctionReturnType } from "convex/server";
-import { ArrowDown, ArrowLeft, MoreHorizontal, Phone, Search, Video } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Avatar } from "../../components/ui/avatar";
+import { usePaginatedQuery, useQuery } from "convex/react";
+import { ArrowDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Modal } from "../../components/ui/modal";
 import { explain } from "../../lib/errors";
-import { useCalls } from "../calls/call-provider";
+import type { ConversationDetails } from "../conversations/types";
 import type { Queued } from "../offline/store";
 import { useDurableComposer } from "../offline/use-composer";
+import { ConversationHeader } from "./conversation-header";
 import { MessageComposer } from "./message-composer";
+import { MessageHistory } from "./message-history";
 import { type Message, MessageItem } from "./message-item";
 import { MessageProfile } from "./message-profile";
 import { MessageSearch } from "./message-search";
+import { useMessageScroll } from "./use-message-scroll";
 
-type Details = NonNullable<FunctionReturnType<typeof api.conversations.details>>;
-// This coordinator keeps virtual scroll, read cursors and send lifetimes together; rendering is delegated to message components.
+// Compose conversation data and durable sending; viewport effects and presentation have their own modules.
 export function Timeline({
   detail,
   userId,
@@ -29,17 +27,14 @@ export function Timeline({
   notify,
   typing,
 }: {
-  detail: Details;
+  detail: ConversationDetails;
   userId: Id<"users">;
   onBack: () => void;
   onInfo: () => void;
   notify: (s: string) => void;
   typing: (value: boolean) => void;
 }) {
-  const muted = useQuery(api.push.preference, { id: detail._id });
-  const mute = useMutation(api.push.mute);
-  const id = detail._id,
-    { start } = useCalls();
+  const id = detail._id;
   const { results, status, loadMore } = usePaginatedQuery(
     api.messages.list,
     { id },
@@ -47,13 +42,11 @@ export function Timeline({
   );
   const messages = [...results].reverse(),
     pins = useQuery(api.messages.pins, { id }),
-    presence = useQuery(api.presence.list, { id }),
-    markRead = useMutation(api.messages.markRead);
+    presence = useQuery(api.presence.list, { id });
   const durable = useDurableComposer(id, notify);
   const { file, setFile, draft, setDraft, replyId, setReply, failed, busy } = durable;
   const [searching, setSearching] = useState(false);
-  const [atBottom, setAtBottom] = useState(true),
-    [anchorId, setAnchor] = useState<Id<"messages"> | null>(null),
+  const [anchorId, setAnchor] = useState<Id<"messages"> | null>(null),
     [person, setPerson] = useState<Message["author"] | null>(null),
     [now, setNow] = useState(Date.now());
   const reply = useQuery(api.messages.anchor, replyId ? { messageId: replyId } : "skip");
@@ -62,53 +55,16 @@ export function Timeline({
     if (replyId && reply !== undefined && (!reply || reply.deletedAt !== undefined)) setReply(null);
   }, [replyId, reply, setReply]);
   const anchor = useQuery(api.messages.anchor, anchorId ? { messageId: anchorId } : "skip");
-  const scroll = useRef<HTMLDivElement>(null),
-    following = useRef(true),
-    lastCount = useRef(0),
-    prepend = useRef<{ height: number; top: number } | null>(null),
-    lastRead = useRef<string | undefined>(undefined);
-  const virtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => scroll.current,
-    estimateSize: () => 105,
-    getItemKey: (index) => messages[index]._id,
-    overscan: 8,
-  });
+  const { scroll, following, prepend, virtualizer, atBottom, setAtBottom } = useMessageScroll(
+    messages,
+    notify,
+  );
   const peer = detail.members.find((m) => m.userId !== userId),
     title = detail.kind === "dm" ? (peer?.name ?? "Conversation") : detail.title;
-  const latest = messages.at(-1);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-  useLayoutEffect(() => {
-    if (!scroll.current) return;
-    if (prepend.current && messages.length > lastCount.current) {
-      scroll.current.scrollTop += scroll.current.scrollHeight - prepend.current.height;
-      prepend.current = null;
-    } else if (following.current && messages.length)
-      virtualizer.scrollToIndex(messages.length - 1, { align: "end" });
-    lastCount.current = messages.length;
-  }, [messages.length, virtualizer]);
-  useEffect(() => {
-    function update() {
-      if (
-        latest &&
-        atBottom &&
-        document.visibilityState === "visible" &&
-        lastRead.current !== latest._id
-      ) {
-        lastRead.current = latest._id;
-        void markRead({ messageId: latest._id }).catch((e) => {
-          lastRead.current = undefined;
-          notify(explain(e));
-        });
-      }
-    }
-    update();
-    document.addEventListener("visibilitychange", update);
-    return () => document.removeEventListener("visibilitychange", update);
-  }, [latest, atBottom, markRead, notify]);
   async function submit(item?: Queued) {
     try {
       await durable.submit(item);
@@ -134,76 +90,17 @@ export function Timeline({
   const online = presence?.some((p) => p.userId !== userId && p.expiresAt > now);
   return (
     <>
-      <header className="conversation-header">
-        <button
-          type="button"
-          className="icon-button mobile-back"
-          aria-label="Retour aux conversations"
-          onClick={onBack}
-        >
-          <ArrowLeft size={19} />
-        </button>
-        <Avatar name={title} userId={detail.kind === "dm" ? peer?.userId : undefined} />
-        <div className="conversation-heading">
-          <h1>{title}</h1>
-          <p>
-            {detail.kind === "group"
-              ? `${detail.members.length} membres`
-              : online
-                ? "En ligne"
-                : lastSeenLabel(presence?.find((p) => p.userId === peer?.userId)?.lastSeenAt)}
-          </p>
-        </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={muted ? "Réactiver les notifications" : "Mettre en sourdine"}
-            aria-pressed={!!muted}
-            onClick={() =>
-              void mute({ id, muted: !muted }).catch((error) => notify(explain(error)))
-            }
-          >
-            {muted ? "🔕" : "🔔"}
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Rechercher dans la conversation"
-            onClick={() => setSearching(true)}
-          >
-            <Search size={18} />
-          </button>
-          {detail.kind === "dm" && (
-            <>
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Appel audio"
-                onClick={() => void start(id, "audio")}
-              >
-                <Phone size={18} />
-              </button>
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Appel vidéo"
-                onClick={() => void start(id, "video")}
-              >
-                <Video size={19} />
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Informations de la conversation"
-            onClick={onInfo}
-          >
-            <MoreHorizontal size={22} />
-          </button>
-        </div>
-      </header>
+      <ConversationHeader
+        detail={detail}
+        title={title}
+        peerId={peer?.userId}
+        online={online}
+        lastSeen={presence?.find((p) => p.userId === peer?.userId)?.lastSeenAt}
+        onBack={onBack}
+        onInfo={onInfo}
+        onSearch={() => setSearching(true)}
+        notify={notify}
+      />
       {!!pins?.length && (
         <div className="context-strip">
           <span>📌</span>
@@ -251,53 +148,17 @@ export function Timeline({
             <p>Envoyez le premier message.</p>
           </div>
         )}
-        <div style={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}>
-          {virtualizer.getVirtualItems().map((row) => {
-            const m = messages[row.index];
-            return (
-              <div
-                key={row.key}
-                ref={virtualizer.measureElement}
-                data-index={row.index}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${row.start}px)`,
-                }}
-              >
-                {(!messages[row.index - 1] ||
-                  !sameDay(messages[row.index - 1]._creationTime, m._creationTime)) && (
-                  <div className="date-separator">
-                    <time dateTime={new Date(m._creationTime).toISOString()}>
-                      {dateLabel(m._creationTime)}
-                    </time>
-                  </div>
-                )}
-                <MessageItem
-                  grouped={
-                    m.kind === "text" &&
-                    messages[row.index - 1]?.kind === "text" &&
-                    messages[row.index - 1]?.userId === m.userId &&
-                    sameDay(messages[row.index - 1]._creationTime, m._creationTime) &&
-                    m._creationTime - messages[row.index - 1]._creationTime < 300_000
-                  }
-                  message={m}
-                  userId={userId}
-                  canPin={detail.kind === "dm" || detail.role === "admin"}
-                  onReply={setReply}
-                  onAnchor={(messageId) => void jump(messageId)}
-                  notify={notify}
-                  onProfile={setPerson}
-                  read={detail.members.some(
-                    (p) => p.userId !== userId && p.readAt >= m._creationTime,
-                  )}
-                />
-              </div>
-            );
-          })}
-        </div>
+        <MessageHistory
+          messages={messages}
+          virtualizer={virtualizer}
+          canPin={detail.kind === "dm" || detail.role === "admin"}
+          members={detail.members}
+          userId={userId}
+          onReply={setReply}
+          onAnchor={(messageId) => void jump(messageId)}
+          onProfile={setPerson}
+          notify={notify}
+        />
       </div>
       {!atBottom && (
         <div className="context-strip">

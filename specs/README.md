@@ -10,6 +10,8 @@ User decisions override proposals. A decision marked **selected** is the impleme
 
 See [monorepo architecture](monorepo.md) for the current apps/packages layout.
 
+See [architecture audit](architecture-audit.md) for enforced dependencies, module extraction and the latest maintainability verification.
+
 ## Reading order
 
 1. [Project](project.md): purpose, audience, scope, release policy.

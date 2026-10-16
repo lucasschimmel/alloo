@@ -3,6 +3,7 @@
 @import "@alloo/ui/pages.css";
 
 @import "./styles/forms.css";
+@import "./styles/sidebar.css";
 @import "./styles/messenger.css";
 @import "./styles/calls.css";
 @import "./styles/responsive.css";

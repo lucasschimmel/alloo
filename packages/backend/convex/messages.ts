@@ -1,54 +1,16 @@
 import { messageLabel } from "@alloo/shared/message-label";
 import { messageFingerprint } from "@alloo/shared/message-request";
-import { boundedPage, cleanText, LIMITS, validReaction } from "@alloo/shared/policy";
+import { cleanText, LIMITS, validReaction } from "@alloo/shared/policy";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
+import { decorate, hidden } from "../src/message-views";
+import { boundedPage } from "../src/pagination";
 import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, type QueryCtx, query } from "./_generated/server";
-import { blocked, member, publicProfile, quota, readableMember } from "./access";
+import { mutation, query } from "./_generated/server";
+import { blocked, member, quota, readableMember } from "./access";
 import { deleteAttachment } from "./attachmentRecords";
 
-async function hidden(ctx: QueryCtx, userId: Id<"users">, id: Id<"messages">) {
-  return !!(await ctx.db
-    .query("hidden")
-    .withIndex("by_pair", (q) => q.eq("userId", userId).eq("messageId", id))
-    .unique());
-}
-async function decorate(ctx: QueryCtx, userId: Id<"users">, msg: Doc<"messages">) {
-  const reply = msg.replyId ? await ctx.db.get(msg.replyId) : null;
-  const quote =
-    reply && reply.conversationId === msg.conversationId && !(await hidden(ctx, userId, reply._id))
-      ? { id: reply._id, body: messageLabel(reply) }
-      : null;
-  const reactions = await ctx.db
-    .query("reactions")
-    .withIndex("by_message", (q) => q.eq("messageId", msg._id))
-    .take(100);
-  const { sendFingerprint: _fingerprint, ...visible } = msg;
-  return {
-    ...visible,
-    body: msg.kind === "text" && msg.deletedAt === undefined ? msg.body : messageLabel(msg),
-    author: await publicProfile(ctx, msg.userId),
-    quote,
-    attachment:
-      msg.attachmentId && msg.deletedAt === undefined
-        ? await attachmentMetadata(ctx, msg.attachmentId)
-        : null,
-    reactions: [...new Set(reactions.map((r) => r.emoji))]
-      .map((emoji) => ({
-        emoji,
-        count: reactions.filter((r) => r.emoji === emoji).length,
-        mine: reactions.some((r) => r.emoji === emoji && r.userId === userId),
-      }))
-      .filter((r) => r.count),
-  };
-}
-async function attachmentMetadata(ctx: QueryCtx, id: Id<"attachments">) {
-  const file = await ctx.db.get(id);
-  return file ? { id: file._id, name: file.name, size: file.size } : null;
-}
 export const list = query({
   args: { id: v.id("conversations"), paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {

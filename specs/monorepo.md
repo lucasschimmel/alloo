@@ -9,6 +9,9 @@ The requested applications/packages layout supersedes the original single-fronte
 | packages/backend | Convex schema, functions, authentication and jobs | shared |
 | packages/shared | Policies, validation and domain/display contracts | none |
 | packages/ui | Semantic CSS, fonts, shared chat/page primitives and reduced motion | none |
+| packages/config | Shared Vite plugin/build policy, development use only | none |
+
+The [maintainability audit](architecture-audit.md) records the current boundary gate and internal module ownership. UI now also provides router-independent document/error components; shared/http owns frontend response policy. Backend-only codecs and pagination live in backend/src.
 
 Apps never import one another. Imports use explicit `@alloo/*` package exports. Shared code does not depend on generated backend schemas. Data-dependent React components remain with their owning web feature. Each application has a separate TypeScript project so TanStack router registrations cannot collide.
 

@@ -8,6 +8,19 @@
     "tailwindcss": "4.3.3"
   },
   "exports": {
-    "./*.css": "./src/*.css"
+    "./chat.css": "./src/chat.css",
+    "./foundations.css": "./src/foundations.css",
+    "./motion.css": "./src/motion.css",
+    "./pages.css": "./src/pages.css",
+    "./document": "./src/document.tsx"
+  },
+  "peerDependencies": {
+    "react": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
   }
 }

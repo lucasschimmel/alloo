@@ -9,6 +9,8 @@ const sandbox = join(root, ".claude", "crafts", "alloo-v2", "mutation", String(D
 mkdirSync(sandbox, { recursive: true });
 for (const name of [
   "packages/backend/convex",
+  "packages/backend/src",
+  "packages/backend/test-support.ts",
   "packages/shared/src",
   "apps/web/src",
   "apps/web/public",
@@ -94,7 +96,7 @@ const cases = [
 
   {
     name: "PNG preflight bypass",
-    file: "packages/shared/src/image.ts",
+    file: "packages/backend/src/image.ts",
     from: "validatePng(input);",
     to: "",
   },
@@ -130,7 +132,7 @@ const cases = [
   },
   {
     name: "deleted last member can invite before cleanup",
-    file: "packages/backend/convex/conversations.ts",
+    file: "packages/backend/src/invitations.ts",
     from: "!liveProfiles.some((p) => p && !p.deleted)",
     to: "false",
   },

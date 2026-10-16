@@ -12,6 +12,7 @@ packages/
   backend/convex/       Schema, authentication, API and scheduled jobs
   shared/src/           Domain policies, validation and display contracts
   ui/src/               Fonts, semantic CSS and shared visual primitives
+  config/src/           Shared Vite/Workers build configuration
 scripts/                Repository tooling and release checks
 tests/e2e/              Connected journeys across both applications
 specs/                  Product, architecture, audit and operations
@@ -66,6 +67,7 @@ Google/GitHub and email verification/recovery are configured integrations: butto
 | `bun run dev` | Both frontends, web 3000 and landing 3001 |
 | `bun run convex` | Backend watcher using the selected deployment |
 | `bun run verify` | Biome, TypeScript, domain tests and production build |
+| `bun run check:architecture` | Package boundaries, exports, cycles, dependency ownership and module size |
 | `bun run test:e2e` | Public browser contract; connected scenarios require flags below |
 | `bun scripts/check-critical-mutations.ts` | Twenty-four selected security/lifecycle fault injections |
 | `bun run build` / `bun run preview` | Build both apps / preview web (`preview:landing` for the site) |

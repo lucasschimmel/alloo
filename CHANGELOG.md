@@ -2,6 +2,9 @@
 
 ## 2.0.0 — Unreleased
 
+- Enforce workspace dependency/export boundaries and module size in verification; isolate server-only image codecs and pagination from shared browser code.
+- Consolidate Worker headers, frontend build configuration, document UI and test fixtures; extract call, viewport, sidebar and invitation responsibilities into focused modules.
+
 - Organize Bun workspaces into independent landing/web apps and backend/shared/UI packages; update CI, root commands and guarded two-Worker deployment.
 
 - Fix stale reply sends, pre-onboarding account deletion, aggregate sidebar read limits and reactive queries after deletion.

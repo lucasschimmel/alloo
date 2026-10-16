@@ -1,7 +1,8 @@
-import { boundedPage, cleanText, LIMITS } from "@alloo/shared/policy";
+import { cleanText, LIMITS } from "@alloo/shared/policy";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
+import { boundedPage } from "../src/pagination";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { actor, quota } from "./access";
