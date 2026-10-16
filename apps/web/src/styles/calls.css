@@ -1,0 +1,139 @@
+.call-panel {
+  position: fixed;
+  inset: 24px;
+  z-index: 70;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+.call-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.call-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.call-stage video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 14px;
+}
+.call-stage .local-video {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 180px;
+  max-height: 140px;
+  border: 2px solid var(--surface);
+}
+.call-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.call-controls button {
+  min-width: 48px;
+  min-height: 48px;
+}
+.hangup {
+  background: var(--danger);
+  color: white;
+  border: 0;
+}
+.incoming-call {
+  position: fixed;
+  z-index: 80;
+  right: 24px;
+  top: 24px;
+  background: var(--surface);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  width: 320px;
+}
+.incoming-call h2 {
+  font-size: 21px;
+}
+.incoming-call p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.system-message {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 12px;
+}
+.failed-send {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--danger);
+  padding: 8px;
+}
+.failed-send button {
+  font-size: 11px;
+}
+.typing-label {
+  font-size: 11px;
+  color: var(--muted);
+  min-height: 17px;
+}
+.profile-avatar-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.profile-avatar-row .avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
+}
+.pins-list {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+}
+.pins-list button {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notice-inline {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.call-stage video.audio-only-media {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.audio-call-identity {
+  margin: auto;
+  text-align: center;
+}
+.audio-call-identity .avatar {
+  width: 96px;
+  height: 96px;
+  font-size: 32px;
+  margin: auto;
+}

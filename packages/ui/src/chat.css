@@ -1,0 +1,66 @@
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--subtle);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 650;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.date-label {
+  align-self: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.bubble {
+  padding: 10px 13px;
+  border-radius: var(--bubble);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 82%;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  white-space: pre-wrap;
+}
+
+.bubble.outgoing {
+  background: var(--primary);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 5px;
+}
+
+.bubble.incoming {
+  border-bottom-left-radius: 5px;
+}
+
+.bubble small {
+  font-size: 10px;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  opacity: 0.7;
+  margin-top: 3px;
+}
+
+.typing-dots {
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 0 12px;
+}

@@ -1,48 +1,46 @@
 {
-	"name": "alloo",
-	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	],
-	"engines": {
-		"bun": ">=1.2.0"
-	},
-	"devEngines": {
-		"packageManager": {
-			"name": "bun",
-			"version": "^1.2.0"
-		}
-	},
-	"scripts": {
-		"dev": "turbo run dev",
-		"build": "turbo run build",
-		"start": "turbo run start",
-		"lint": "biome check .",
-		"lint:fix": "biome check --write .",
-		"format": "biome format --write .",
-		"typecheck": "tsc --noEmit && turbo run typecheck",
-		"test": "turbo run test",
-		"test:watch": "turbo run test:watch",
-		"test:e2e": "playwright test",
-		"test:e2e:ui": "playwright test --ui",
-		"verify": "bun run lint && bun run typecheck && bun run test && bun run build",
-		"prepare": "husky"
-	},
-	"lint-staged": {
-		"*.{js,jsx,mjs,ts,tsx,mts,json,jsonc,css}": [
-			"biome check --write --no-errors-on-unmatched"
-		]
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.5.7",
-		"@commitlint/cli": "^21.2.1",
-		"@commitlint/config-conventional": "^21.2.0",
-		"@playwright/test": "^1.62.1",
-		"@types/node": "^26.1.2",
-		"husky": "^9.1.7",
-		"lint-staged": "^17.3.0",
-		"turbo": "^2.10.8",
-		"typescript": "^7.0.2"
-	}
+  "name": "alloo",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --parallel --filter \"@alloo/web\" --filter \"@alloo/landing\" dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "dev:landing": "bun run --cwd apps/landing dev",
+    "build": "bun run --sequential --filter \"@alloo/web\" --filter \"@alloo/landing\" build",
+    "preview": "bun run --cwd apps/web preview",
+    "preview:landing": "bun run --cwd apps/landing preview",
+    "typecheck": "tsc --noEmit && bun run --sequential --workspaces --if-present typecheck",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test:e2e": "playwright test",
+    "convex": "convex dev",
+    "verify": "bun run check:architecture && bun run lint && bun run typecheck && bun run test && bun run build",
+    "test:mutation": "bun scripts/check-critical-mutations.ts",
+    "release:check": "bun scripts/check-release.ts",
+    "deploy": "bun run release:check && bun run --sequential --filter \"@alloo/web\" --filter \"@alloo/landing\" deploy",
+    "deploy:dry-run": "bun run build && bun run --sequential --filter \"@alloo/web\" --filter \"@alloo/landing\" deploy:dry-run",
+    "check:architecture": "bun scripts/check-architecture.ts"
+  },
+  "devDependencies": {
+    "@alloo/shared": "workspace:*",
+    "@babel/parser": "8.0.7",
+    "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/pngjs": "6.0.5",
+    "convex": "1.46.0",
+    "convex-test": "0.0.62",
+    "fake-indexeddb": "6.2.5",
+    "pngjs": "7.0.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
 }

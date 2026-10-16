@@ -1,0 +1,26 @@
+{
+  "name": "@alloo/ui",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@fontsource-variable/figtree": "5.3.0",
+    "tailwindcss": "4.3.3"
+  },
+  "exports": {
+    "./chat.css": "./src/chat.css",
+    "./foundations.css": "./src/foundations.css",
+    "./motion.css": "./src/motion.css",
+    "./pages.css": "./src/pages.css",
+    "./document": "./src/document.tsx"
+  },
+  "peerDependencies": {
+    "react": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

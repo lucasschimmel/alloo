@@ -1,0 +1,19 @@
+{
+  "name": "@alloo/config",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./vite": "./src/vite.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/vite-plugin": "1.64.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@tanstack/react-start": "1.169.2",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.4"
+  }
+}

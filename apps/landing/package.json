@@ -1,25 +1,31 @@
 {
-	"name": "@alloo/landing",
-	"version": "0.1.0",
-	"private": true,
-	"scripts": {
-		"dev": "next dev --turbopack --port 3001",
-		"build": "next build",
-		"start": "next start --port 3001",
-		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"next": "16.2.0",
-		"react": "19.2.4",
-		"react-dom": "19.2.4"
-	},
-	"devDependencies": {
-		"@tailwindcss/postcss": "^4",
-		"@types/node": "^20",
-		"@types/react": "^19",
-		"@types/react-dom": "^19",
-		"babel-plugin-react-compiler": "1.0.0",
-		"tailwindcss": "^4",
-		"typescript": "^5"
-	}
+  "name": "@alloo/landing",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "deploy": "bun run ../../scripts/check-release.ts && bun run build && wrangler deploy",
+    "deploy:dry-run": "wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "1.170.44",
+    "@tanstack/react-start": "1.169.2",
+    "lucide-react": "1.57.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "@alloo/ui": "workspace:*",
+    "@alloo/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "vite": "8.3.4",
+    "wrangler": "4.151.0",
+    "typescript": "7.0.2",
+    "@alloo/config": "workspace:*"
+  }
 }

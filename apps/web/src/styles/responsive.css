@@ -1,0 +1,55 @@
+@media (max-width: 1000px) {
+  .workspace {
+    grid-template-columns: 270px 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .workspace {
+    display: block;
+  }
+  .sidebar,
+  .conversation-pane {
+    height: 100dvh;
+  }
+  .workspace.has-conversation .sidebar {
+    display: none;
+  }
+  .workspace:not(.has-conversation) .conversation-pane {
+    display: none;
+  }
+  .mobile-back {
+    display: inline-flex;
+  }
+  .conversation-header {
+    padding: 12px;
+    gap: 8px;
+  }
+  .header-actions {
+    gap: 0;
+  }
+  .timeline {
+    padding: 14px;
+  }
+  .composer-area {
+    padding-inline: 12px;
+  }
+  .context-strip {
+    padding-inline: 12px;
+  }
+  .call-panel {
+    inset: 8px;
+    padding: 14px;
+  }
+  .call-stage .local-video {
+    width: 100px;
+  }
+  .auth-page {
+    padding: 24px 16px;
+  }
+  .auth-card {
+    padding: 26px;
+  }
+  .bubble {
+    max-width: 90%;
+  }
+}

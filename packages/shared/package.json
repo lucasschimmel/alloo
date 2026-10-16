@@ -1,0 +1,26 @@
+{
+  "name": "@alloo/shared",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "emoji-regex": "11.0.0"
+  },
+  "exports": {
+    "./attachments": "./src/attachments.ts",
+    "./message-label": "./src/message-label.ts",
+    "./message-request": "./src/message-request.ts",
+    "./offline": "./src/offline.ts",
+    "./policy": "./src/policy.ts",
+    "./provider-avatar": "./src/provider-avatar.ts",
+    "./push": "./src/push.ts",
+    "./release": "./src/release.ts",
+    "./http": "./src/http.ts"
+  },
+  "devDependencies": {
+    "vitest": "5.0.4"
+  }
+}

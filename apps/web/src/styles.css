@@ -1,0 +1,27 @@
+@import "@alloo/ui/foundations.css";
+@import "@alloo/ui/chat.css";
+@import "@alloo/ui/pages.css";
+
+@import "./styles/forms.css";
+@import "./styles/sidebar.css";
+@import "./styles/messenger.css";
+@import "./styles/calls.css";
+@import "./styles/responsive.css";
+@import "@alloo/ui/motion.css";
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.emoji-grid button {
+  font-size: 24px;
+  min-height: 44px;
+}
+.date-separator {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 18px 0;
+}

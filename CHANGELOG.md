@@ -1,0 +1,23 @@
+# Changelog
+
+## 2.0.0 — Unreleased
+
+- Enforce workspace dependency/export boundaries and module size in verification; isolate server-only image codecs and pagination from shared browser code.
+- Consolidate Worker headers, frontend build configuration, document UI and test fixtures; extract call, viewport, sidebar and invitation responsibilities into focused modules.
+
+- Organize Bun workspaces into independent landing/web apps and backend/shared/UI packages; update CI, root commands and guarded two-Worker deployment.
+
+- Fix stale reply sends, pre-onboarding account deletion, aggregate sidebar read limits and reactive queries after deletion.
+- Clear device-local drafts/outbox after remote account deletion without affecting a newly active account.
+- Record final audit evidence and the outstanding production configuration, provider, device and recovery gates.
+
+- Add authenticated message attachments, conversation-scoped indexed search, author edits with revision checks and delete-for-all with file erasure.
+- Keep replies/history reactive, preserve retry identity after edits/deletion and extend storage reconciliation to retained attachments.
+
+- Rebuild the V1 Next.js workspace as one TanStack Start application with Convex Auth.
+- Implement profiles, private/group conversations, invitations, realtime messaging and native WebRTC calls.
+- Add server authorization, bounded operations, safe image decoding, session-owned calls, abuse controls and account cleanup.
+- Add domain/browser verification, targeted critical fault injections, a CI workflow and configuration/release documentation.
+- Preserve V1 in the external backup described in `specs/rebuild-and-recovery.md`.
+
+This is a locally verified implementation, not a public production release. See `specs/implementation-status.md` for acceptance gaps and external-service gates.
