@@ -8,6 +8,27 @@ import { attachmentName } from "../../../shared/attachments";
 import { LIMITS } from "../../../shared/policy";
 import { explain } from "../../lib/errors";
 export type Attached = { id: Id<"attachments">; name: string; size: number };
+export async function fetchAttachment(
+  endpoint: string,
+  token: string,
+  params: Record<string, string>,
+  file?: File,
+  signal?: AbortSignal,
+) {
+  const response = await fetch(`${endpoint}/attachments?${new URLSearchParams(params)}`, {
+    method: file ? "POST" : "GET",
+    body: file,
+    headers: { Authorization: `Bearer ${token}` },
+    signal: signal,
+  });
+  if (!response.ok) {
+    if (response.status === 413) throw new Error("ATTACHMENT_TOO_LARGE");
+    if (response.status === 429) throw new Error("RATE_LIMITED");
+    throw new Error(file ? "INVALID_ATTACHMENT" : "FORBIDDEN");
+  }
+  if (file) return { uploaded: (await response.json()) as Attached, blob: null };
+  return { uploaded: null, blob: await response.blob() };
+}
 export function useAttachmentTransfer() {
   const token = useAuthToken(),
     endpoint = useQuery(api.attachmentRecords.endpoint, {});
@@ -20,19 +41,7 @@ export function useAttachmentTransfer() {
     active.current = controller;
     const timer = setTimeout(() => controller.abort(), LIMITS.attachmentUploadMs);
     try {
-      const response = await fetch(`${endpoint}/attachments?${new URLSearchParams(params)}`, {
-        method: file ? "POST" : "GET",
-        body: file,
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        if (response.status === 413) throw new Error("ATTACHMENT_TOO_LARGE");
-        if (response.status === 429) throw new Error("RATE_LIMITED");
-        throw new Error(file ? "INVALID_ATTACHMENT" : "FORBIDDEN");
-      }
-      if (file) return { uploaded: (await response.json()) as Attached, blob: null };
-      return { uploaded: null, blob: await response.blob() };
+      return await fetchAttachment(endpoint, token, params, file, controller.signal);
     } finally {
       clearTimeout(timer);
     }

@@ -22,4 +22,4 @@ Request notification permission after an explicit user action. Store device subs
 
 Web Push needs backend dispatch, service worker handling and platform-specific testing. Notification delivery is best-effort; it is not guaranteed incoming-call wakeup on mobile. Badging is optional enhancement. No call reliability claim may depend on a suspended browser staying active.
 
-All four increments have independent acceptance gates. Only increment 1 is core parity; later increments require explicit scheduling.
+Current implementation: drafts, durable outbox and push dispatch/worker/settings are implemented and tested as described in [offline-push-implementation.md](offline-push-implementation.md). Public-asset/offline-shell caching remains deferred. There is no fetch handler, background sync or forced worker activation; an active call is not reloaded. Live push delivery and mobile installation remain release exercises.

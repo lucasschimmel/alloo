@@ -6,6 +6,8 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { Avatar } from "../../components/ui/avatar";
 import { explain } from "../../lib/errors";
+import { clearBrowserAccount } from "../offline/browser-push";
+import { OfflineSettings } from "../offline/settings";
 import { ModerationQueue } from "./moderation-queue";
 import { prepareAvatar } from "./prepare-avatar";
 
@@ -139,6 +141,7 @@ export function ProfileEditor({
         <>
           <hr />
           <ModerationQueue />
+          <OfflineSettings />
           <h3>Vos données</h3>
           <p className="notice-inline">
             L’export contient votre profil et les messages que vous avez envoyés. La suppression
@@ -149,7 +152,16 @@ export function ProfileEditor({
             <button type="button" disabled={busy} onClick={() => void act(exportData)}>
               Exporter mes données
             </button>
-            <button type="button" disabled={busy} onClick={() => void act(signOut)}>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void act(async () => {
+                  await clearBrowserAccount();
+                  await signOut();
+                })
+              }
+            >
               Se déconnecter
             </button>
           </div>
@@ -170,6 +182,7 @@ export function ProfileEditor({
                 disabled={busy || confirmation !== "SUPPRIMER"}
                 onClick={() =>
                   void act(async () => {
+                    await clearBrowserAccount();
                     await remove({ confirmation });
                     await signOut();
                   })

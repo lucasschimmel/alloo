@@ -7,10 +7,35 @@ import { join, resolve } from "node:path";
 const root = process.cwd();
 const sandbox = join(root, ".claude", "crafts", "alloo-v2", "mutation", String(Date.now()));
 mkdirSync(sandbox, { recursive: true });
-for (const name of ["convex", "shared", "src"])
+for (const name of ["convex", "shared", "src", "public"])
   cpSync(join(root, name), join(sandbox, name), { recursive: true });
 writeFileSync(join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
 const cases = [
+  {
+    name: "outbox account generation bypass",
+    file: "src/features/offline/store.ts",
+    from: "current?.owner !== owner || current.generation !== generation",
+    to: "false",
+  },
+  {
+    name: "send expected account bypass",
+    file: "convex/messages.ts",
+    from: "args.expectedUserId && args.expectedUserId !== own.userId",
+    to: "false",
+  },
+  {
+    name: "push mute bypass",
+    file: "convex/push.ts",
+    from: "membership.muted || membership.readAt",
+    to: "membership.readAt",
+  },
+  {
+    name: "worker binding bypass",
+    file: "public/sw.js",
+    from: "control.account === payload.account &&",
+    to: "",
+  },
+
   {
     name: "message author edit bypass",
     file: "convex/messages.ts",

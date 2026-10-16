@@ -12,8 +12,9 @@ import { Avatar } from "../../components/ui/avatar";
 import { Modal } from "../../components/ui/modal";
 import { explain } from "../../lib/errors";
 import { useCalls } from "../calls/call-provider";
-import { useAttachmentTransfer } from "./attachment-transfer";
-import { MessageComposer, type Pending } from "./message-composer";
+import type { Queued } from "../offline/store";
+import { useDurableComposer } from "../offline/use-composer";
+import { MessageComposer } from "./message-composer";
 import { type Message, MessageItem } from "./message-item";
 import { MessageProfile } from "./message-profile";
 import { MessageSearch } from "./message-search";
@@ -35,6 +36,8 @@ export function Timeline({
   notify: (s: string) => void;
   typing: (value: boolean) => void;
 }) {
+  const muted = useQuery(api.push.preference, { id: detail._id });
+  const mute = useMutation(api.push.mute);
   const id = detail._id,
     { start } = useCalls();
   const { results, status, loadMore } = usePaginatedQuery(
@@ -45,23 +48,15 @@ export function Timeline({
   const messages = [...results].reverse(),
     pins = useQuery(api.messages.pins, { id }),
     presence = useQuery(api.presence.list, { id }),
-    send = useMutation(api.messages.send),
     markRead = useMutation(api.messages.markRead);
-  const transfer = useAttachmentTransfer();
-  const discard = useMutation(api.attachmentRecords.discard);
-  const [file, setFile] = useState<File | null>(null);
-  const sending = useRef(false);
+  const durable = useDurableComposer(id, notify);
+  const { file, setFile, draft, setDraft, replyId, setReply, failed, busy } = durable;
   const [searching, setSearching] = useState(false);
-  const [draft, setDraft] = useState(""),
-    [replyId, setReplyId] = useState<Id<"messages"> | null>(null),
-    [failed, setFailed] = useState<Pending[]>([]),
-    [busy, setBusy] = useState(false),
-    [atBottom, setAtBottom] = useState(true),
+  const [atBottom, setAtBottom] = useState(true),
     [anchorId, setAnchor] = useState<Id<"messages"> | null>(null),
     [person, setPerson] = useState<Message["author"] | null>(null),
     [now, setNow] = useState(Date.now());
   const reply = useQuery(api.messages.anchor, replyId ? { messageId: replyId } : "skip") ?? null;
-  const setReply = (message: Message | null) => setReplyId(message?._id ?? null);
   const anchor = useQuery(api.messages.anchor, anchorId ? { messageId: anchorId } : "skip");
   const scroll = useRef<HTMLDivElement>(null),
     following = useRef(true),
@@ -110,43 +105,14 @@ export function Timeline({
     document.addEventListener("visibilitychange", update);
     return () => document.removeEventListener("visibilitychange", update);
   }, [latest, atBottom, markRead, notify]);
-  async function submit(item?: Pending) {
-    if (sending.current) return;
-    const pending = item ?? {
-      body: draft.trim(),
-      operationId: crypto.randomUUID(),
-      file: file ?? undefined,
-      replyId: reply?.deletedAt === undefined ? reply?._id : undefined,
-    };
-    if (!pending.body && !pending.file && !pending.attachmentId) return;
-    if (pending.file && !pending.attachmentId && !transfer.ready) return;
-    sending.current = true;
-    if (!item) {
-      setDraft("");
-      setFile(null);
-      setReply(null);
-      typing(false);
-    }
-    setBusy(true);
+  async function submit(item?: Queued) {
     try {
-      if (pending.file && !pending.attachmentId)
-        pending.attachmentId = (await transfer.upload(id, pending.file)).id;
-      await send({
-        id,
-        body: pending.body,
-        operationId: pending.operationId,
-        replyId: pending.replyId,
-        attachmentId: pending.attachmentId,
-      });
-      setFailed((rows) => rows.filter((x) => x.operationId !== pending.operationId));
+      await durable.submit(item);
+      typing(false);
       following.current = true;
       setAtBottom(true);
-    } catch (e) {
-      if (!item) setFailed((rows) => [...rows, pending]);
-      notify(explain(e));
-    } finally {
-      sending.current = false;
-      setBusy(false);
+    } catch {
+      notify("Impossible de reprendre cet envoi.");
     }
   }
   async function jump(messageId: Id<"messages">) {
@@ -185,6 +151,17 @@ export function Timeline({
           </p>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={muted ? "Réactiver les notifications" : "Mettre en sourdine"}
+            aria-pressed={!!muted}
+            onClick={() =>
+              void mute({ id, muted: !muted }).catch((error) => notify(explain(error)))
+            }
+          >
+            {muted ? "🔕" : "🔔"}
+          </button>
           <button
             type="button"
             className="icon-button"
@@ -363,7 +340,7 @@ export function Timeline({
         setDraft={setDraft}
         reply={reply?.deletedAt === undefined ? reply : null}
         failed={failed}
-        busy={busy || (!!file && !transfer.ready)}
+        busy={busy || !durable.ready}
         typing={typing}
         typingLabel={
           typingPeople.length
@@ -375,10 +352,7 @@ export function Timeline({
         onSubmit={submit}
         onCancelReply={() => setReply(null)}
         onRemoveFailed={(operationId) => {
-          const pending = failed.find((row) => row.operationId === operationId);
-          if (pending?.attachmentId)
-            void discard({ id: pending.attachmentId }).catch((error) => notify(explain(error)));
-          setFailed((rows) => rows.filter((x) => x.operationId !== operationId));
+          void durable.cancel(operationId).catch(() => notify("Impossible de retirer cet envoi."));
         }}
       />
       <MessageProfile

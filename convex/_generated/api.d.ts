@@ -30,6 +30,8 @@ import type * as messages from "../messages.js";
 import type * as moderation from "../moderation.js";
 import type * as presence from "../presence.js";
 import type * as profiles from "../profiles.js";
+import type * as push from "../push.js";
+import type * as pushDelivery from "../pushDelivery.js";
 import type * as turn from "../turn.js";
 
 import type {
@@ -61,6 +63,8 @@ declare const fullApi: ApiFromModules<{
   moderation: typeof moderation;
   presence: typeof presence;
   profiles: typeof profiles;
+  push: typeof push;
+  pushDelivery: typeof pushDelivery;
   turn: typeof turn;
 }>;
 

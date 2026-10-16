@@ -50,6 +50,9 @@ export function backendReleaseIssues(env: Environment) {
     "AUTH_GITHUB_SECRET",
     "TURN_SHARED_SECRET",
     "ALLOO_OPERATOR_IDS",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_SUBJECT",
   ])
     if (!env[name]?.trim()) issues.push(name);
   if (!env.TURN_URLS?.split(",").every((url) => /^turns?:[^\s,]+$/.test(url.trim())))

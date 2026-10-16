@@ -38,7 +38,7 @@ Before launch: isolated staging Convex deployment, separate OAuth applications, 
 
 ## Data lifecycle
 
-Avatars: authenticate and reserve quota before decoding; store sanitized pixels; commit profile pointer and remove old object; compensate failed commits. Hourly reconciliation deletes unreferenced objects older than one hour. Storage is currently avatar-only: revise reconciliation before introducing other stored file types.
+Avatars: authenticate and reserve quota before decoding; store sanitized pixels; commit profile pointer and remove old object; compensate failed commits. Hourly reconciliation deletes unreferenced objects older than one hour. Attachment records protect linked message files; unlinked upload drafts expire after one hour. Keep attachment-aware reconciliation deployed during rollback.
 
 Presence is a lease, not a durable availability promise. Calls expire on the server, independently of browser timers. Signaling is removed at termination. Deletion immediately tombstones the profile, then batches membership succession, session/refresh cleanup and provider-account/code removal. Messages remain with an anonymized author. Blocks, reports, reactions, hidden-message rows and other operational records can retain pseudonymous IDs; define and implement their retention/export requirements before a public release.
 
@@ -59,3 +59,16 @@ Stop new affected operations through deployment configuration, preserve a minima
 ## Bounded abuse policy
 
 Groups remain capped at 100 members. Each account can store up to 200 blocks. Group membership checks read at most 201 block rows per participant (20,100 at the group cap), keeping index ranges and documents below Convex transaction limits. Oversized legacy lists fail closed; unblock remains available subject to the ordinary operation rate limit. Increasing this cap requires a different indexed representation and a revised transaction budget.
+
+
+## Web Push and local persistence
+
+Deploy the additive Convex schema/functions, then the frontend and /sw.js. Configure VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT (a monitored mailto: address or HTTPS contact) in Convex through protected provider controls. Keep the private key out of frontend variables and repository files. Release readiness requires their presence; presence does not certify key validity or delivery. No keys were created by this implementation.
+
+The frontend exposes only the public application-server key to an authenticated account. Users explicitly enable notifications in account settings. Supported push hosts: fcm.googleapis.com, updates.push.services.mozilla.com, web.push.apple.com; other services fail closed. Test Chromium, Firefox, Safari and installed iOS behavior on the chosen HTTPS origin. Changing the VAPID key requires disabling/re-enabling browser subscriptions.
+
+Dispatch is best-effort: generic payload, 60-second TTL, 10-second timeout, at most three transient-error attempts. 404/410 endpoints are removed; session revocation suppresses delivery and expired-session rows are reclaimed at registration. Max five active subscriptions/account. Delete-account immediately removes subscriptions. Browser logout invalidates the durable local account generation before unsubscribing; offline unsubscribe failure cannot display future payloads against that revoked generation. Providers still see routing metadata. Never log subscriptions, keys or payloads.
+
+Drafts and outbox are device-local IndexedDB, not cross-device sync or encryption. Limits: 100 drafts, 100 queued messages, 50 MiB queued attachments; seven-day expiration swept on next use. Browser eviction also removes data. Text/reply drafts survive navigation/reload; files become durable when queued. One tab holds an expiring send lease; per-conversation FIFO prevents overtaking retrying/failed messages. Eight failed attempts stop automatic retries; manual retry/remove controls remain. No persisted auth credentials, private-response cache or guaranteed closed-app sending.
+
+Rollback frontend and worker together; older active workers may remain until tabs close. Keep additive backend APIs/schema until old tabs and queues drain. Verify on staging: permission rejection, disable/re-enable, muted/read/deleted/blocked messages, logout, provider expiration, duplicate delivery and click routing. Provider mocks do not certify live delivery.

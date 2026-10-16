@@ -1,11 +1,29 @@
 import { useConvexAuth, useQuery } from "convex/react";
+import { useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Workspace } from "../conversations/workspace";
+import { clearBrowserAccount } from "../offline/browser-push";
+import { OfflineProvider } from "../offline/provider";
 import { ProfileEditor } from "../profile/profile-editor";
 import { SignIn } from "./sign-in";
 
 export function AuthGate() {
   const { isLoading, isAuthenticated } = useConvexAuth();
+  const [cleanupError, setCleanupError] = useState("");
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated)
+      void clearBrowserAccount().catch(() =>
+        setCleanupError(
+          "Le stockage local n’a pas pu être effacé. Effacez les données du site sur cet appareil partagé.",
+        ),
+      );
+  }, [isLoading, isAuthenticated]);
+  if (cleanupError)
+    return (
+      <main className="center-page" role="alert">
+        {cleanupError}
+      </main>
+    );
   if (isLoading)
     return (
       <main className="center-page" aria-busy="true">
@@ -44,5 +62,9 @@ function SignedIn() {
         </section>
       </main>
     );
-  return <Workspace key={me.userId} profile={me.profile} />;
+  return (
+    <OfflineProvider key={me.userId} userId={me.userId}>
+      <Workspace profile={me.profile} />
+    </OfflineProvider>
+  );
 }

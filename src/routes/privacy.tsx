@@ -16,6 +16,17 @@ export const Route = createFileRoute("/privacy")({
         Votre profil, vos messages, les membres de vos groupes et les informations nécessaires à vos
         appels. Les flux audio et vidéo utilisent WebRTC ; ils peuvent transiter par un relais TURN.
       </p>
+      <h2>Sur cet appareil</h2>
+      <p>
+        Les brouillons et les messages en attente sont conservés localement pendant 7 jours au
+        maximum, puis supprimés à votre prochaine utilisation. La déconnexion les efface. Ces
+        données ne sont pas chiffrées sur cet appareil.
+      </p>
+      <p>
+        Les notifications sont facultatives. Votre navigateur et son service push acheminent une
+        notification sans texte de message ni nom d’expéditeur. Vous pouvez les désactiver ou mettre
+        une conversation en sourdine.
+      </p>
       <h2>Vos choix</h2>
       <p>
         Vous pouvez masquer un message pour vous, bloquer une personne, exporter vos données et

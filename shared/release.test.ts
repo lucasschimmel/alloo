@@ -45,6 +45,9 @@ it("T-PROD-RELEASE requires real backend providers and disabled development bypa
       "TURN_URLS",
       "AUTH_RESEND_KEY",
       "ALLOO_OPERATOR_IDS",
+      "VAPID_PUBLIC_KEY",
+      "VAPID_PRIVATE_KEY",
+      "VAPID_SUBJECT",
     ]),
   );
 });

@@ -82,3 +82,10 @@ See [the final production audit](specs/production-audit.md) for confirmed findin
 ### Expanded messaging
 
 Private attachments (one file/message, up to 10 MiB), paginated text search within a conversation, author editing and delete-for-all are implemented. Files require authentication on every download and are never served by a permanent public URL. See [messaging expansion](specs/messaging-expansion.md) for supported extensions, expiry, quotas and deployment order. Files are download-only and are not antivirus-scanned.
+
+
+### Durable drafts, outbox and notifications
+
+Drafts persist on the current device. The outbox includes attachments, resumes while Alloo is open and connected, and protects retries against duplicates/account changes. Logout clears local drafts and pending sends. See [offline/push](specs/offline-push-implementation.md).
+
+Web Push is opt-in in account settings; each conversation can be muted. Notifications hide contents and sender names. Configure the three VAPID settings in Convex before activation; the release guard checks their presence. Real provider/mobile validation remains required. The worker does not cache private history or provide an offline application shell.

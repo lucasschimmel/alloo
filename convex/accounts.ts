@@ -84,6 +84,11 @@ export const remove = mutation({
         avatar: undefined,
       });
     }
+    const subscriptions = await ctx.db
+      .query("pushSubscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .take(5);
+    for (const sub of subscriptions) await ctx.db.delete(sub._id);
     for (const call of await liveCalls(ctx, userId)) await endCall(ctx, call, "connection-failed");
     await ctx.scheduler.runAfter(0, internal.accounts.cleanup, { userId });
   },

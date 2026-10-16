@@ -1,17 +1,10 @@
 import { Paperclip, Send, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import type { Id } from "../../../convex/_generated/dataModel";
 import { ATTACHMENT_ACCEPT } from "../../../shared/attachments";
 import { LIMITS } from "../../../shared/policy";
+import type { Queued } from "../offline/store";
 import { EmojiPicker } from "./emoji-picker";
 import type { Message } from "./message-item";
-export type Pending = {
-  body: string;
-  operationId: string;
-  replyId?: Id<"messages">;
-  attachmentId?: Id<"attachments">;
-  file?: File;
-};
 export function MessageComposer({
   file,
   setFile,
@@ -33,13 +26,13 @@ export function MessageComposer({
   draft: string;
   setDraft: (value: string) => void;
   reply: Message | null;
-  failed: Pending[];
+  failed: Queued[];
   busy: boolean;
   typing: (value: boolean) => void;
   typingLabel: string;
   kind: "group" | "dm";
   title: string;
-  onSubmit: (item?: Pending) => Promise<void>;
+  onSubmit: (item?: Queued) => Promise<void>;
   onRemoveFailed: (id: string) => void;
   onCancelReply: () => void;
 }) {
@@ -66,11 +59,21 @@ export function MessageComposer({
         )}
         {failed.map((item) => (
           <div className="failed-send" key={item.operationId}>
-            <span>Non envoyé : {item.body.slice(0, 50) || item.file?.name}</span>
-            <button type="button" disabled={busy} onClick={() => void onSubmit(item)}>
+            <span>
+              {item.error ? "Échec" : "En attente"} : {item.body.slice(0, 50) || item.file?.name}
+            </span>
+            <button
+              type="button"
+              disabled={busy || !item.error}
+              onClick={() => void onSubmit(item)}
+            >
               Réessayer
             </button>
-            <button type="button" disabled={busy} onClick={() => onRemoveFailed(item.operationId)}>
+            <button
+              type="button"
+              disabled={busy || item.leaseUntil > Date.now()}
+              onClick={() => onRemoveFailed(item.operationId)}
+            >
               Retirer
             </button>
           </div>
@@ -124,6 +127,7 @@ export function MessageComposer({
           </button>
           <textarea
             ref={input}
+            disabled={busy}
             aria-label="Votre message"
             placeholder={`Écrire ${kind === "group" ? "dans le groupe" : `à ${title}`}…`}
             rows={1}

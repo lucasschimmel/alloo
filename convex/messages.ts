@@ -4,6 +4,7 @@ import { ConvexError, v } from "convex/values";
 import { messageLabel } from "../shared/message-label";
 import { messageFingerprint } from "../shared/message-request";
 import { boundedPage, cleanText, LIMITS, validReaction } from "../shared/policy";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { blocked, member, publicProfile, quota, readableMember } from "./access";
@@ -98,6 +99,7 @@ export const pins = query({
 export const send = mutation({
   args: {
     id: v.id("conversations"),
+    expectedUserId: v.optional(v.id("users")),
     body: v.string(),
     operationId: v.string(),
     replyId: v.optional(v.id("messages")),
@@ -106,6 +108,8 @@ export const send = mutation({
   handler: async (ctx, args) => {
     const own = await member(ctx, args.id),
       body = args.attachmentId && !args.body.trim() ? "" : cleanText(args.body, LIMITS.message);
+    if (args.expectedUserId && args.expectedUserId !== own.userId)
+      throw new ConvexError("FORBIDDEN");
     if (args.operationId.length < 8 || args.operationId.length > 100)
       throw new ConvexError("INVALID_INPUT");
     const fingerprint = await messageFingerprint(args.id, body, args.replyId, args.attachmentId);
@@ -173,6 +177,7 @@ export const send = mutation({
     const now = Date.now();
     await ctx.db.patch(args.id, { updatedAt: now });
     for (const m of members) await ctx.db.patch(m._id, { updatedAt: now });
+    await ctx.scheduler.runAfter(0, internal.push.fanout, { messageId: id });
     return id;
   },
 });
@@ -305,5 +310,35 @@ export const search = query({
       if (msg.deletedAt === undefined && !(await hidden(ctx, own.userId, msg._id)))
         rows.push(await decorate(ctx, own.userId, msg));
     return { ...page, page: rows };
+  },
+});
+
+export const receipt = query({
+  args: {
+    id: v.id("conversations"),
+    expectedUserId: v.id("users"),
+    operationId: v.string(),
+    body: v.string(),
+    replyId: v.optional(v.id("messages")),
+    attachmentId: v.optional(v.id("attachments")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId !== args.expectedUserId) throw new ConvexError("UNAUTHENTICATED");
+    const old = await ctx.db
+      .query("messages")
+      .withIndex("by_operation", (q) =>
+        q.eq("userId", args.expectedUserId).eq("operationId", args.operationId),
+      )
+      .unique();
+    if (!old) return null;
+    const fingerprint = await messageFingerprint(
+      args.id,
+      args.body.trim(),
+      args.replyId,
+      args.attachmentId,
+    );
+    if (old.sendFingerprint !== fingerprint) throw new ConvexError("CONFLICT");
+    return old._id;
   },
 });

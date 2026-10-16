@@ -204,7 +204,7 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
         <main className="conversation-pane">
           {!connection.isWebSocketConnected && (
             <div className="connection-banner" role="status">
-              Reconnexion en cours… Vos messages enregistrés restent disponibles.
+              Reconnexion en cours… Vos envois sont conservés sur cet appareil.
             </div>
           )}
           {selected ? (

@@ -26,7 +26,7 @@ V1 status is based on source inspection and the previous audit, not a production
 | F20 | Privacy, retention, support and operations | Missing/incomplete | Before public release: policy matches actual processing and tested restore/rollback | T-OPS |
 | F21 | Attachments and message search | Missing | Implemented: one private file up to 10 MiB, indexed conversation search; see messaging-expansion.md | T-MSG-FILE / T-MSG-SEARCH |
 | F22 | Editing and deletion for everyone | Missing | Implemented: author-only, no time window, revision checks, content erasure and reactive quotes/search | T-MSG-EDIT / T-MSG-DELETE |
-| F23 | Persistent drafts, offline outbox, push/mute | Missing | Later: account isolation, idempotency, consent, cache cleanup and notification privacy | T-OFFLINE |
+| F23 | Persistent drafts, offline outbox, push/mute | Missing | Implemented: account-fenced local drafts/outbox, queued attachments, opt-in generic push and mute; live VAPID/device checks pending | T-OFF-* / T-PUSH-* |
 | F24 | Group calls, native apps, E2EE, phone/passkeys/2FA | Missing | Deferred; require separate product and architecture decisions | T-FUTURE |
 
 ## Behavioral details

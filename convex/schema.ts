@@ -7,6 +7,16 @@ export default defineSchema({
   authIssuance: defineTable({ key: v.string(), startedAt: v.number(), count: v.number() })
     .index("by_key", ["key"])
     .index("by_started", ["startedAt"]),
+  pushSubscriptions: defineTable({
+    userId: v.id("users"),
+    sessionId: v.id("authSessions"),
+    endpoint: v.string(),
+    p256dh: v.string(),
+    auth: v.string(),
+    binding: v.string(),
+  })
+    .index("by_endpoint", ["endpoint"])
+    .index("by_user", ["userId"]),
   profiles: defineTable({
     userId: v.id("users"),
     username: v.string(),
@@ -31,6 +41,7 @@ export default defineSchema({
     userId: v.id("users"),
     role: v.union(v.literal("admin"), v.literal("member")),
     readAt: v.number(),
+    muted: v.optional(v.boolean()),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId", "updatedAt"])
