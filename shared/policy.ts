@@ -5,6 +5,7 @@ export const LIMITS = {
   bio: 160,
   name: 60,
   group: 100,
+  blocks: 200,
   page: 40,
   avatarBytes: 5 * 1024 * 1024,
   avatarPixels: 1_048_576,

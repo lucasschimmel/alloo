@@ -14,7 +14,10 @@
     "test:e2e": "playwright test",
     "convex": "convex dev",
     "verify": "bun run lint && bun run typecheck && bun run test && bun run build",
-    "test:mutation": "bun scripts/check-critical-mutations.ts"
+    "test:mutation": "bun scripts/check-critical-mutations.ts",
+    "release:check": "bun scripts/check-release.ts",
+    "deploy": "bun run release:check && bun run build && wrangler deploy",
+    "deploy:dry-run": "bun run build && wrangler deploy --dry-run"
   },
   "dependencies": {
     "@auth/core": "0.41.3",
@@ -36,6 +39,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@cloudflare/vite-plugin": "1.64.0",
     "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.5",
@@ -47,6 +51,7 @@
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vite": "8.3.4",
-    "vitest": "5.0.4"
+    "vitest": "5.0.4",
+    "wrangler": "4.151.0"
   }
 }

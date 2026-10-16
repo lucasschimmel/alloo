@@ -85,6 +85,10 @@ export class Peer {
     this.clearReconnect();
     this.config.failed(new Error("CALL_CONNECTION_FAILED"));
   }
+  startConnecting() {
+    if (!this.closed && !this.reconnectTimer && this.pc.connectionState !== "connected")
+      this.reconnectTimer = setTimeout(() => this.failConnection(), LIMITS.connectMs);
+  }
   prepare(video: boolean) {
     this.prepared ??= this.acquireMedia(video);
     return this.prepared;
@@ -110,8 +114,7 @@ export class Peer {
     await this.prepared;
     if (this.closed) return;
     if (data.description) {
-      if (!this.reconnectTimer && this.pc.connectionState !== "connected")
-        this.reconnectTimer = setTimeout(() => this.failConnection(), LIMITS.connectMs);
+      this.startConnecting();
       const collision =
         data.description.type === "offer" &&
         (this.makingOffer || this.pc.signalingState !== "stable");

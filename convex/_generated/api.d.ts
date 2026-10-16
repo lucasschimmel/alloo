@@ -19,6 +19,7 @@ import type * as callLifecycle from "../callLifecycle.js";
 import type * as calls from "../calls.js";
 import type * as conversations from "../conversations.js";
 import type * as crons from "../crons.js";
+import type * as deployment from "../deployment.js";
 import type * as email from "../email.js";
 import type * as groupLifecycle from "../groupLifecycle.js";
 import type * as http from "../http.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   calls: typeof calls;
   conversations: typeof conversations;
   crons: typeof crons;
+  deployment: typeof deployment;
   email: typeof email;
   groupLifecycle: typeof groupLifecycle;
   http: typeof http;

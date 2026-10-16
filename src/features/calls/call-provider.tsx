@@ -94,7 +94,10 @@ export function CallProvider({
   );
   useEffect(() => {
     if (call?.state === "ended") endRef.current();
-    if (call?.state === "active") machine.current?.send({ type: "CONNECT" });
+    if (call?.state === "active") {
+      peer.current?.startConnecting();
+      machine.current?.send({ type: "CONNECT" });
+    }
   }, [call?.state]);
   useEffect(() => {
     if (call?.state !== "active" || !callId) return;

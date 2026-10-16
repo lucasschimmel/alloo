@@ -50,7 +50,7 @@ Google/GitHub and email verification/recovery are configured integrations: butto
 | `bun run convex` | Backend watcher using the selected deployment |
 | `bun run verify` | Biome, TypeScript, domain tests and production build |
 | `bun run test:e2e` | Public browser contract; connected scenarios require flags below |
-| `bun scripts/check-critical-mutations.ts` | Nine isolated security/lifecycle/translation fault injections |
+| `bun scripts/check-critical-mutations.ts` | Thirteen isolated security/lifecycle/translation fault injections |
 | `bun run build` / `bun run preview` | Compile / locally preview production output |
 | `bun audit` | Dependency vulnerability database check |
 
@@ -73,6 +73,8 @@ Native Convex subscriptions are the single server-state cache. There is no extra
 
 ## Before public release
 
-Follow [operations](specs/operations.md). Configure production OAuth/email/TURN, select and test the hosting adapter, define the operator/contact and retention policy, test restore and browser/device compatibility. This repository is a working local V2; it is not a production deployment or an end-to-end encryption implementation.
+Follow [operations](specs/operations.md). Cloudflare Workers is configured and locally tested. Configure production OAuth/email/TURN, choose the public origin, define the operator/contact and retention policy, and test restore and browser/device compatibility. `bun run deploy:dry-run` checks packaging; `bun run deploy` enforces `release:check` before publishing. This repository is a working local V2; it is not a production deployment or an end-to-end encryption implementation.
 
 The previous code and local settings are preserved outside the repository; see [V1 recovery](specs/rebuild-and-recovery.md).
+
+See [the final production audit](specs/production-audit.md) for confirmed findings, corrections and remaining external launch gates. Blocking is capped at 200 people per account to preserve bounded group admission checks.

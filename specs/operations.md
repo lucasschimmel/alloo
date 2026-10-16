@@ -24,7 +24,15 @@ See current primary documentation: [Convex Auth](https://labs.convex.dev/auth), 
 
 ## Hosting
 
-`bun run build` produces `dist/client` and the server entry. `bun run preview` is a local verification server, not the production hosting decision. Cloudflare Workers remains the candidate from the original specification; add its supported adapter and execute a real runtime smoke test before adoption. Do not serve only the client assets and assume public SSR/server behavior survived.
+Cloudflare Workers is the selected hosting target. The pinned Cloudflare Vite plugin and Wrangler build `dist/client` plus `dist/server/wrangler.json`. The custom `src/server.ts` preserves response headers and exposes `/healthz` (frontend liveness only, not backend/provider readiness). Local preview uses workerd; the connected browser suite is tested against that compiled runtime. Invocation logging is disabled to avoid recording private conversation URLs; platform error logs remain enabled.
+
+1. Provision an isolated production Convex deployment and configure its secrets/settings through protected provider controls. Deploy the backend before frontend release checks.
+2. Select the HTTPS frontend origin (a workers.dev origin is acceptable), then align Convex `SITE_URL` and provider redirects. No domain has been selected yet.
+3. Set build variables `ALLOO_PUBLIC_ORIGIN`, `VITE_CONVEX_URL` and `VITE_SUPPORT_EMAIL`. The latter is intentionally public. Do not place server credentials in frontend build variables.
+4. `bun run release:check` validates frontend settings, invokes the CLI-selected production backend's internal `deployment:readiness`, and requires exact backend URL and frontend origin matches. It prints missing setting names only. Configuration presence does not prove provider delivery or successful recovery exercises.
+5. `bun run deploy:dry-run` packages the Worker without publishing. `bun run deploy` performs the guarded check, rebuilds and publishes using an authenticated Cloudflare account. Neither a remote deployment nor account setup was performed during this audit.
+
+Dotenv inheritance into Worker bindings is explicitly disabled. Convex local development settings stay separate from Worker runtime configuration. CI builds again after the isolated backend creates its public URL, then runs the compiled Worker browser contracts. Restart preview after rebuilding.
 
 Before launch: isolated staging Convex deployment, separate OAuth applications, HTTPS frontend, real email/TURN providers, operators, final privacy/support text, rate/cost monitoring and tested rollback. No deployment was performed by this rebuild.
 
@@ -47,3 +55,7 @@ Email issuance uses per-address digest and global quotas before OTP replacement.
 ## Incident handling
 
 Stop new affected operations through deployment configuration, preserve a minimal redacted timeline, rotate exposed keys at the provider, revoke affected sessions and re-run relevant tests. Never record message bodies, auth material, SDP or ICE payloads in monitoring. Local setup material exposed during this implementation was immediately replaced; it was confined to the anonymous local test backend.
+
+## Bounded abuse policy
+
+Groups remain capped at 100 members. Each account can store up to 200 blocks. Group membership checks read at most 201 block rows per participant (20,100 at the group cap), keeping index ranges and documents below Convex transaction limits. Oversized legacy lists fail closed; unblock remains available subject to the ordinary operation rate limit. Increasing this cap requires a different indexed representation and a revised transaction budget.

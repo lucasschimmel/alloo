@@ -5,6 +5,7 @@ import { boundedPage, cleanText, LIMITS } from "../shared/policy";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { actor, quota } from "./access";
+import { endCall, liveCalls } from "./callLifecycle";
 import { closeEmptyGroup, groupEvent } from "./groupLifecycle";
 export const block = mutation({
   args: { targetId: v.id("users"), blocked: v.boolean() },
@@ -16,8 +17,18 @@ export const block = mutation({
       .query("blocks")
       .withIndex("by_pair", (q) => q.eq("userId", userId).eq("targetId", targetId))
       .unique();
-    if (blocked && !row) await ctx.db.insert("blocks", { userId, targetId });
-    else if (!blocked && row) await ctx.db.delete(row._id);
+    if (blocked && !row) {
+      const rows = await ctx.db
+        .query("blocks")
+        .withIndex("by_pair", (q) => q.eq("userId", userId))
+        .take(LIMITS.blocks);
+      if (rows.length >= LIMITS.blocks) throw new ConvexError("BLOCK_LIMIT");
+      await ctx.db.insert("blocks", { userId, targetId });
+    } else if (!blocked && row) await ctx.db.delete(row._id);
+    if (blocked)
+      for (const call of await liveCalls(ctx, userId))
+        if (call.callerId === targetId || call.recipientId === targetId)
+          await endCall(ctx, call, "connection-failed");
   },
 });
 export const isBlocked = query({
@@ -73,6 +84,7 @@ export const remove = mutation({
         avatar: undefined,
       });
     }
+    for (const call of await liveCalls(ctx, userId)) await endCall(ctx, call, "connection-failed");
     await ctx.scheduler.runAfter(0, internal.accounts.cleanup, { userId });
   },
 });

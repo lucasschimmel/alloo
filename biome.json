@@ -8,6 +8,7 @@
       "!!test-results",
       "!!playwright-report",
       "!!.convex",
+      "!!.wrangler",
       "!!.tanstack",
       "!!src/routeTree.gen.ts",
       "!!convex/_generated",

@@ -14,6 +14,13 @@ async function signup(page: Page, handle: string, name: string) {
   await expect(page.getByRole("button", { name: "Mon compte" })).toBeVisible();
 }
 test("T-PUBLIC landing, mobile layout and invitation continuation", async ({ page }) => {
+  const health = await page.request.get("/healthz");
+  expect(health.ok()).toBe(true);
+  expect(await health.json()).toEqual({ status: "ok", service: "alloo-frontend" });
+  const privatePage = await page.request.get("/app");
+  expect(privatePage.headers()["cache-control"]).toContain("no-store");
+  expect(privatePage.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(privatePage.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Juste discuter. Rien d’autre." })).toBeVisible();
   await page.screenshot({ path: "test-results/landing-desktop.png", fullPage: true });

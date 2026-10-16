@@ -4,24 +4,9 @@ import { LIMITS } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
-import { actor, blocked, member, publicProfile, quota } from "./access";
-import { endCall } from "./callLifecycle";
+import { actor, blocked, member, publicProfile, quota, readableUser } from "./access";
+import { endCall, liveCalls } from "./callLifecycle";
 
-async function liveFor(ctx: QueryCtx, userId: Id<"users">) {
-  const rows = await Promise.all(
-    (["ringing", "active"] as const).flatMap((state) => [
-      ctx.db
-        .query("calls")
-        .withIndex("by_caller", (q) => q.eq("callerId", userId).eq("state", state))
-        .take(2),
-      ctx.db
-        .query("calls")
-        .withIndex("by_recipient", (q) => q.eq("recipientId", userId).eq("state", state))
-        .take(2),
-    ]),
-  );
-  return rows.flat();
-}
 async function owned(ctx: QueryCtx, id: Id<"calls">) {
   const userId = await actor(ctx),
     call = await ctx.db.get(id);
@@ -29,6 +14,10 @@ async function owned(ctx: QueryCtx, id: Id<"calls">) {
     throw new ConvexError("FORBIDDEN");
   await member(ctx, call.conversationId);
   return { userId, call };
+}
+function publicCall(call: Doc<"calls">) {
+  const { callerSession: _caller, acceptedSession: _recipient, ...view } = call;
+  return view;
 }
 function sessionOwner(call: Doc<"calls">, userId: Id<"users">, session: string | undefined) {
   if (call.state === "ended") return;
@@ -38,12 +27,12 @@ function sessionOwner(call: Doc<"calls">, userId: Id<"users">, session: string |
 export const current = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await readableUser(ctx);
     if (!userId) return null;
-    const call = (await liveFor(ctx, userId)).find((c) => c.expiresAt > Date.now());
+    const call = (await liveCalls(ctx, userId)).find((c) => c.expiresAt > Date.now());
     return call
       ? {
-          ...call,
+          ...publicCall(call),
           peer: await publicProfile(
             ctx,
             call.callerId === userId ? call.recipientId : call.callerId,
@@ -58,7 +47,7 @@ export const get = query({
     if (!(await getAuthUserId(ctx))) return null;
     const { call, userId } = await owned(ctx, id);
     return {
-      ...call,
+      ...publicCall(call),
       peer: await publicProfile(ctx, call.callerId === userId ? call.recipientId : call.callerId),
     };
   },
@@ -82,7 +71,7 @@ export const start = mutation({
     const peer = rows.find((m) => m.userId !== own.userId);
     if (!peer || (await blocked(ctx, own.userId, peer.userId))) throw new ConvexError("FORBIDDEN");
     for (const uid of [own.userId, peer.userId])
-      for (const call of await liveFor(ctx, uid)) {
+      for (const call of await liveCalls(ctx, uid)) {
         if (call.expiresAt > Date.now()) throw new ConvexError("BUSY");
         await endCall(ctx, call, call.state === "ringing" ? "missed" : "expired");
       }
@@ -106,6 +95,7 @@ export const accept = mutation({
   args: { id: v.id("calls"), session: v.string() },
   handler: async (ctx, { id, session }) => {
     const { userId, call } = await owned(ctx, id);
+    if (await blocked(ctx, call.callerId, call.recipientId)) throw new ConvexError("BLOCKED");
     if (
       userId !== call.recipientId ||
       call.state !== "ringing" ||
@@ -133,7 +123,7 @@ export const hangup = mutation({
   },
   handler: async (ctx, { id, session, reason }) => {
     const { userId, call } = await owned(ctx, id);
-    if (call.state === "active") sessionOwner(call, userId, session);
+    if (call.state === "active" || userId === call.callerId) sessionOwner(call, userId, session);
     await endCall(
       ctx,
       call,

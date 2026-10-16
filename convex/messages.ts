@@ -101,7 +101,8 @@ export const send = mutation({
       )
       .unique();
     if (old) {
-      if (old.conversationId !== args.id || old.body !== body) throw new ConvexError("CONFLICT");
+      if (old.conversationId !== args.id || old.body !== body || old.replyId !== args.replyId)
+        throw new ConvexError("CONFLICT");
       return old._id;
     }
     const c = await ctx.db.get(args.id);

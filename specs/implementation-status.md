@@ -25,16 +25,16 @@ This document records the implemented state. Other specification files remain th
 | F17 / T-RECOVERY | Email verification/reset UI, 15-minute OTPs, neutral reset response, issuance quotas before replacement; quota tests | Real Resend delivery, replay/expiry integration and production sender needed |
 | F18 / T-ABUSE | Blocking gates DM/calls/invites; report capture; allowlisted operator queue; access tests | Configure actual operators and response process before public launch |
 | F19 / T-ACCOUNT | Profile/authored-message export; delete confirmation, tombstone, bounded membership/session/login-account cleanup; tested access revocation | Export is not a complete legal data-access package; no recent-session reauthentication; residual pseudonymous operational rows and retained messages require explicit retention policy |
-| F20 / T-OPS | Runbook, CI definition, defensive response headers and generic errors | No remote hosting deployment, CI-host run, recovery drill, telemetry/SLOs or final legal/contact policy |
+| F20 / T-OPS | Runbook, CI definition, defensive response headers and generic errors | Cloudflare Workers adapter, local workerd browser checks, guarded deploy and frontend liveness are implemented; remote deployment, CI-host run, recovery drill, SLOs and final legal/contact policy remain |
 | F21–F24 | Explicitly deferred | Attachments/search/edit-for-all, offline queue/push, group calls/native/E2EE/passkeys |
 
 ## Executed checks
 
 - Biome recommended rules and formatting: passed with no warnings at the final code gate.
 - Strict TypeScript and production client/server build: passed.
-- Vitest / convex-test: 53 tests passed (authorization/lifecycle, uploads, late media acquisition, parity, provider-avatar policy, translation and reconnect).
-- Playwright: three scenarios passed twice consecutively (six executions) against the compiled frontend with the real anonymous local Convex backend: public/responsive, group/invite/avatar/exclusion/re-add, account/message/reaction/copy/profile/navigation/theme/audio/video/ringing/logout. Web Audio creation and teardown are instrumented; physical speaker output is not certified.
-- Nine selected fault injections were killed (including group cleanup, pre-cleanup invite revival, ignored media disconnect and hardcoded translation and a transport-held SDP collision lock): disabled block check, disabled call-session ownership, duplicate terminal call event, and allowed self-DM. This is targeted fault injection, **not** a full mutation score.
+- Vitest / convex-test: 69 tests passed (authorization/lifecycle, uploads, late media acquisition, parity, provider-avatar policy, translation and reconnect).
+- Playwright: three scenarios passed in the final production-audit run against the compiled Cloudflare Workers runtime with the real anonymous local Convex backend: public/responsive, group/invite/avatar/exclusion/re-add, account/message/reaction/copy/profile/navigation/theme/audio/video/ringing/logout. Web Audio creation and teardown are instrumented; physical speaker output is not certified.
+- Thirteen selected fault injections were killed: the nine parity boundaries plus PNG preflight, call ownership-field exposure, reply retry identity and initial group block checks. This is targeted fault injection, **not** a full mutation score.
 - Dependency audit: no known vulnerabilities reported by Bun at execution. This is a database snapshot, not proof of absence.
 - FABER independent review found and drove fixes for losing-tab hangup, late heartbeat failure, overlapping screen pickers and email issuance abuse. The targeted re-review passed. Parity review additionally found cross-member block bypass, a deleted-last-member invitation race and missing account-deletion group events; all were fixed and tested.
 
@@ -56,4 +56,6 @@ The preview server must be restarted after a production rebuild: its loaded SSR 
 
 Emoji validation uses the pinned MIT-licensed `emoji-regex` package rather than the newer native `v` regex flag, preserving compatibility with the project's ES2022 target. No authentication or cache replacement was introduced.
 
-Call negotiation now releases its SDP collision lock before transport acknowledgement, waits for local media before answering, and bounds stalled negotiation after receiving SDP. Deterministic tests cover delayed acknowledgements and microphone acquisition; they do not certify every network ordering or bound an unanswered browser permission prompt.
+Call negotiation now releases its SDP collision lock before transport acknowledgement, waits for local media before answering, and starts the connection deadline on server acceptance even without incoming SDP. Deterministic tests cover delayed acknowledgements and microphone acquisition; they do not certify every network ordering.
+
+The final production audit and new parser/authorization/deployment findings are tracked in [production-audit.md](production-audit.md).

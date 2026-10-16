@@ -137,3 +137,10 @@ it("T-AC-08 ends initial negotiation that never establishes media", async () => 
   expect(failed).toHaveBeenCalledOnce();
   peer.close();
 });
+it("T-PROD-CALL bounds an accepted call even without incoming SDP", () => {
+  const { peer, failed } = setup();
+  peer.startConnecting();
+  vi.advanceTimersByTime(LIMITS.connectMs);
+  expect(failed).toHaveBeenCalledOnce();
+  peer.close();
+});

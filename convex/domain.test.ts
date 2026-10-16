@@ -170,7 +170,7 @@ describe("V2 domain contracts", () => {
       kind: "audio",
       session: "caller",
     });
-    await a.mutation(api.calls.hangup, { id });
+    await a.mutation(api.calls.hangup, { id, session: "caller" });
     await b.mutation(api.calls.hangup, { id });
     const messages = await t.run((ctx) => ctx.db.query("messages").collect());
     expect(messages).toHaveLength(1);

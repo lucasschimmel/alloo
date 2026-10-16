@@ -1,5 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
+import { LIMITS } from "../shared/policy";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -13,6 +14,15 @@ export async function actor(ctx: QueryCtx) {
   if (profile?.deleted) throw new ConvexError("ACCOUNT_DELETED");
   return id;
 }
+export async function readableUser(ctx: QueryCtx) {
+  const id = await getAuthUserId(ctx);
+  if (!id) return null;
+  const profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_user", (q) => q.eq("userId", id))
+    .unique();
+  return profile?.deleted ? null : id;
+}
 export async function member(ctx: QueryCtx, conversationId: Id<"conversations">) {
   const userId = await actor(ctx);
   const row = await ctx.db
@@ -24,13 +34,8 @@ export async function member(ctx: QueryCtx, conversationId: Id<"conversations">)
 }
 // Reactive reads must tolerate access being revoked while a screen is mounted.
 export async function readableMember(ctx: QueryCtx, conversationId: Id<"conversations">) {
-  const userId = await getAuthUserId(ctx);
+  const userId = await readableUser(ctx);
   if (!userId) return null;
-  const profile = await ctx.db
-    .query("profiles")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .unique();
-  if (profile?.deleted) return null;
   return ctx.db
     .query("members")
     .withIndex("by_pair", (q) => q.eq("conversationId", conversationId).eq("userId", userId))
@@ -67,6 +72,27 @@ export async function blocked(ctx: QueryCtx, a: Id<"users">, b: Id<"users">) {
     ),
   );
   return rows.some(Boolean);
+}
+// One index range per participant, not two per pair (100 members exceed 4,096 ranges).
+// Existing blocked pairs remain allowed in shared groups; only new relationships are checked.
+export async function assertCompatibleMembers(
+  ctx: QueryCtx,
+  existing: Id<"users">[],
+  additions: Id<"users">[],
+) {
+  const added = new Set(additions),
+    all = [...new Set([...existing, ...additions])];
+  for (const userId of all) {
+    const targets = all.filter((id) => id !== userId && (added.has(userId) || added.has(id)));
+    if (!targets.length) continue;
+    const rows = await ctx.db
+      .query("blocks")
+      .withIndex("by_pair", (q) => q.eq("userId", userId))
+      .take(LIMITS.blocks + 1);
+    // Fail closed on oversized legacy histories; never silently miss a blocked target.
+    if (rows.length > LIMITS.blocks) throw new ConvexError("BLOCK_LIMIT");
+    if (rows.some((row) => targets.includes(row.targetId))) throw new ConvexError("BLOCKED");
+  }
 }
 export async function quota(
   ctx: MutationCtx,

@@ -11,6 +11,25 @@ for (const name of ["convex", "shared", "src"])
   cpSync(join(root, name), join(sandbox, name), { recursive: true });
 writeFileSync(join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
 const cases = [
+  { name: "PNG preflight bypass", file: "shared/image.ts", from: "validatePng(input);", to: "" },
+  {
+    name: "call ownership identifiers exposed",
+    file: "convex/calls.ts",
+    from: "return view;",
+    to: "return call;",
+  },
+  {
+    name: "reply retry conflict ignored",
+    file: "convex/messages.ts",
+    from: " || old.replyId !== args.replyId",
+    to: "",
+  },
+  {
+    name: "group creation cross-member block bypass",
+    file: "convex/conversations.ts",
+    from: "await assertCompatibleMembers(ctx, [], ids);",
+    to: "",
+  },
   {
     name: "SDP collision lock held until transport acknowledgement",
     file: "src/features/calls/peer.ts",

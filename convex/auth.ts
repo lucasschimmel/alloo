@@ -31,6 +31,7 @@ const passwordProvider = Password({
 const options = (passwordProvider as unknown as { options: ConvexCredentialsUserConfig }).options;
 const authorize = options.authorize;
 options.authorize = async (params, ctx) => {
+  if (!authSettings().password) throw new Error("EMAIL_NOT_CONFIGURED");
   const email = String(params.email ?? "")
     .trim()
     .toLowerCase();

@@ -1,5 +1,5 @@
-import type { Doc } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 export async function endCall(ctx: MutationCtx, call: Doc<"calls">, reason: string) {
   if (call.state === "ended") return;
   await ctx.db.patch(call._id, { state: "ended", reason, expiresAt: Date.now() });
@@ -40,4 +40,20 @@ export async function endCall(ctx: MutationCtx, call: Doc<"calls">, reason: stri
     .withIndex("by_conversation", (q) => q.eq("conversationId", call.conversationId))
     .take(2);
   for (const member of members) await ctx.db.patch(member._id, { updatedAt: now });
+}
+
+export async function liveCalls(ctx: QueryCtx, userId: Id<"users">) {
+  const rows = await Promise.all(
+    (["ringing", "active"] as const).flatMap((state) => [
+      ctx.db
+        .query("calls")
+        .withIndex("by_caller", (q) => q.eq("callerId", userId).eq("state", state))
+        .take(2),
+      ctx.db
+        .query("calls")
+        .withIndex("by_recipient", (q) => q.eq("recipientId", userId).eq("state", state))
+        .take(2),
+    ]),
+  );
+  return rows.flat();
 }

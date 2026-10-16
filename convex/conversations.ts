@@ -4,14 +4,24 @@ import { ConvexError, v } from "convex/values";
 import { messageLabel } from "../shared/message-label";
 import { boundedPage, canonicalPair, cleanText, LIMITS } from "../shared/policy";
 import { mutation, query } from "./_generated/server";
-import { actor, admin, blocked, member, publicProfile, quota, readableMember } from "./access";
+import {
+  actor,
+  admin,
+  assertCompatibleMembers,
+  blocked,
+  member,
+  publicProfile,
+  quota,
+  readableMember,
+  readableUser,
+} from "./access";
 
 import { closeEmptyGroup, groupEvent } from "./groupLifecycle";
 
 export const list = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await readableUser(ctx);
     if (!userId) return { page: [], isDone: true, continueCursor: "" };
     const page = await ctx.db
       .query("members")
@@ -143,6 +153,7 @@ export const createGroup = mutation({
       if (!p || p.deleted || (await blocked(ctx, userId, id)))
         throw new ConvexError("INVALID_MEMBERS");
     }
+    await assertCompatibleMembers(ctx, [], ids);
     const now = Date.now(),
       id = await ctx.db.insert("conversations", {
         kind: "group",
@@ -237,6 +248,11 @@ export const addMembers = mutation({
     const additions = [...new Set(userIds)].filter((uid) => !rows.some((m) => m.userId === uid));
     if (rows.length + additions.length > LIMITS.group) throw new ConvexError("GROUP_FULL");
     await quota(ctx, own.userId, "add-members", 20);
+    await assertCompatibleMembers(
+      ctx,
+      rows.map((m) => m.userId),
+      additions,
+    );
     for (const uid of additions) {
       const profile = await ctx.db
         .query("profiles")
@@ -244,8 +260,7 @@ export const addMembers = mutation({
         .unique();
       if (!profile || profile.deleted || (await blocked(ctx, own.userId, uid)))
         throw new ConvexError("INVALID_MEMBERS");
-      for (const peerId of [...rows.map((m) => m.userId), ...additions])
-        if (peerId !== uid && (await blocked(ctx, peerId, uid))) throw new ConvexError("BLOCKED");
+
       await ctx.db.insert("members", {
         conversationId: id,
         userId: uid,

@@ -1,6 +1,8 @@
 export function explain(error: unknown) {
   const text = error instanceof Error ? error.message : String(error);
   const messages: Record<string, string> = {
+    BLOCK_LIMIT:
+      "La limite de 200 personnes bloquées est atteinte pour un membre concerné. Contactez le support.",
     TRANSLATION_UNAVAILABLE:
       "La traduction locale n’est pas disponible pour ces langues dans ce navigateur.",
     TRANSLATION_UNCERTAIN:
