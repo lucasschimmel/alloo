@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 // Deliberately scoped fault injection, not a claim of whole-repository mutation coverage.
@@ -7,149 +7,166 @@ import { join, resolve } from "node:path";
 const root = process.cwd();
 const sandbox = join(root, ".claude", "crafts", "alloo-v2", "mutation", String(Date.now()));
 mkdirSync(sandbox, { recursive: true });
-for (const name of ["convex", "shared", "src", "public"])
+for (const name of [
+  "packages/backend/convex",
+  "packages/shared/src",
+  "apps/web/src",
+  "apps/web/public",
+])
   cpSync(join(root, name), join(sandbox, name), { recursive: true });
 writeFileSync(join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
+// Bun isolates third-party dependencies per workspace. Reuse these installed packages;
+// Vitest aliases still resolve every @alloo source import into the isolated copy.
+for (const workspace of ["apps/web", "packages/backend", "packages/shared"]) {
+  const installed = join(root, workspace, "node_modules");
+  if (existsSync(installed))
+    symlinkSync(installed, join(sandbox, workspace, "node_modules"), "junction");
+}
 const cases = [
   {
     name: "pre-onboarding deletion tombstone bypass",
-    file: "convex/accounts.ts",
+    file: "packages/backend/convex/accounts.ts",
     from: "if (!p)",
     to: "if (false)",
   },
   {
     name: "conversation aggregate read budget bypass",
-    file: "shared/policy.ts",
+    file: "packages/shared/src/policy.ts",
     from: "conversationPage: 8",
     to: "conversationPage: 30",
   },
   {
     name: "scoped local deletion owner bypass",
-    file: "src/features/offline/store.ts",
+    file: "apps/web/src/features/offline/store.ts",
     from: "expectedOwner && active?.owner !== expectedOwner",
     to: "false",
   },
 
   {
     name: "outbox account generation bypass",
-    file: "src/features/offline/store.ts",
+    file: "apps/web/src/features/offline/store.ts",
     from: "current?.owner !== owner || current.generation !== generation",
     to: "false",
   },
   {
     name: "send expected account bypass",
-    file: "convex/messages.ts",
+    file: "packages/backend/convex/messages.ts",
     from: "args.expectedUserId && args.expectedUserId !== own.userId",
     to: "false",
   },
   {
     name: "push mute bypass",
-    file: "convex/push.ts",
+    file: "packages/backend/convex/push.ts",
     from: "membership.muted || membership.readAt",
     to: "membership.readAt",
   },
   {
     name: "worker binding bypass",
-    file: "public/sw.js",
+    file: "apps/web/public/sw.js",
     from: "control.account === payload.account &&",
     to: "",
   },
 
   {
     name: "message author edit bypass",
-    file: "convex/messages.ts",
+    file: "packages/backend/convex/messages.ts",
     from: 'msg.userId !== own.userId || msg.kind !== "text"',
     to: 'msg.kind !== "text"',
   },
   {
     name: "attachment owner bypass",
-    file: "convex/messages.ts",
+    file: "packages/backend/convex/messages.ts",
     from: "file.userId !== own.userId ||",
     to: "",
   },
   {
     name: "attachment hidden download bypass",
-    file: "convex/attachmentRecords.ts",
+    file: "packages/backend/convex/attachmentRecords.ts",
     from: " || hidden)",
     to: ")",
   },
   {
     name: "search conversation filter bypass",
-    file: "convex/messages.ts",
+    file: "packages/backend/convex/messages.ts",
     from: '.eq("conversationId", id).eq("kind", "text")',
     to: '.eq("kind", "text")',
   },
 
-  { name: "PNG preflight bypass", file: "shared/image.ts", from: "validatePng(input);", to: "" },
+  {
+    name: "PNG preflight bypass",
+    file: "packages/shared/src/image.ts",
+    from: "validatePng(input);",
+    to: "",
+  },
   {
     name: "call ownership identifiers exposed",
-    file: "convex/calls.ts",
+    file: "packages/backend/convex/calls.ts",
     from: "return view;",
     to: "return call;",
   },
   {
     name: "reply retry conflict ignored",
-    file: "shared/message-request.ts",
+    file: "packages/shared/src/message-request.ts",
     from: "replyId ?? null",
     to: "null",
   },
   {
     name: "group creation cross-member block bypass",
-    file: "convex/conversations.ts",
+    file: "packages/backend/convex/conversations.ts",
     from: "await assertCompatibleMembers(ctx, [], ids);",
     to: "",
   },
   {
     name: "SDP collision lock held until transport acknowledgement",
-    file: "src/features/calls/peer.ts",
+    file: "apps/web/src/features/calls/peer.ts",
     from: "this.makingOffer = false;\n          }",
     to: "await sent; this.makingOffer = false;\n          }",
   },
   {
     name: "empty group cleanup disabled",
-    file: "convex/groupLifecycle.ts",
+    file: "packages/backend/convex/groupLifecycle.ts",
     from: "await ctx.scheduler.runAfter(0, internal.groupLifecycle.purge, { id });",
     to: "",
   },
   {
     name: "deleted last member can invite before cleanup",
-    file: "convex/conversations.ts",
+    file: "packages/backend/convex/conversations.ts",
     from: "!liveProfiles.some((p) => p && !p.deleted)",
     to: "false",
   },
   {
     name: "disconnected media ignored",
-    file: "src/features/calls/peer.ts",
+    file: "apps/web/src/features/calls/peer.ts",
     from: 'this.pc.connectionState === "disconnected"',
     to: "false",
   },
   {
     name: "translation direction hardcoded",
-    file: "src/features/messages/translation.ts",
+    file: "apps/web/src/features/messages/translation.ts",
     from: "const sourceLanguage = detected.detectedLanguage;",
     to: 'const sourceLanguage = "en";',
   },
   {
     name: "block policy bypass",
-    file: "convex/access.ts",
+    file: "packages/backend/convex/access.ts",
     from: "return rows.some(Boolean);",
     to: "return false;",
   },
   {
     name: "call session ownership bypass",
-    file: "convex/calls.ts",
+    file: "packages/backend/convex/calls.ts",
     from: "if (!expected || expected !== session)",
     to: "if (false)",
   },
   {
     name: "duplicate terminal history",
-    file: "convex/callLifecycle.ts",
+    file: "packages/backend/convex/callLifecycle.ts",
     from: 'if (call.state === "ended") return;',
     to: "",
   },
   {
     name: "self-DM allowed",
-    file: "shared/policy.ts",
+    file: "packages/shared/src/policy.ts",
     from: 'if (a === b) throw new Error("SELF_DM");',
     to: "",
   },
@@ -165,7 +182,13 @@ function run() {
       "--config",
       resolve("vitest.config.ts"),
     ],
-    { cwd: root, encoding: "utf8", timeout: 60_000, windowsHide: true },
+    {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 60_000,
+      windowsHide: true,
+      env: { ...process.env, ALLOO_TEST_ROOT: sandbox },
+    },
   );
 }
 const baseline = run();

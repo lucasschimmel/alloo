@@ -12,7 +12,7 @@
 | Proposal | Disposition | Rationale |
 |---|---|---|
 | Start + Vite, private SPA routes | Selected | Fits browser-first Convex Auth; public rendering remains useful |
-| Separate Astro landing | Deferred | One Start application avoids two toolchains/deployments for the current scope |
+| Separate landing | Selected (updated 2026-10-16) | User requested apps/landing ownership; two Start apps share Bun workspaces and UI foundations, without Astro |
 | TS 7 everywhere | Candidate | A version mismatch does not prove Next caused it; verify the complete toolchain first |
 | Better Auth, phone OTP/passkeys/2FA | Not selected | Conflicts with retained Convex Auth; phone identity is not a confirmed product need |
 | R2 for all files | Deferred evaluation | Useful for media economics; adds lifecycle/privacy/integration work; Convex Storage is adequate for initial avatars |

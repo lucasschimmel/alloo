@@ -1,0 +1,40 @@
+.center-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 28px;
+  gap: 16px;
+}
+
+.center-page h1 {
+  font-size: 32px;
+  margin: 0;
+}
+
+.center-page p {
+  max-width: 520px;
+  margin: 0;
+}
+
+.document-page {
+  max-width: 720px;
+  padding: 45px 24px;
+  margin: auto;
+}
+
+.document-page h1 {
+  font-size: 38px;
+  margin-top: 60px;
+}
+
+.document-page h2 {
+  font-size: 22px;
+  margin-top: 30px;
+}
+
+.document-page p {
+  color: var(--muted);
+}

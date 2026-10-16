@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img">
+	<title>Alloo</title>
+	<!-- Maskable: artwork kept inside the 80% safe zone so OS masks never clip it. -->
+	<rect width="512" height="512" fill="#3b5bf5" />
+	<g transform="translate(124 136) scale(11)">
+		<path
+			fill="#ffffff"
+			fill-rule="evenodd"
+			clip-rule="evenodd"
+			d="M12 4c-4.42 0-8 2.91-8 6.5 0 2 1.11 3.79 2.86 4.98v2.6c0 .64.72 1.01 1.24.64l2.3-1.64c.52.08 1.06.12 1.6.12 4.42 0 8-2.91 8-6.7C20 6.91 16.42 4 12 4ZM7.35 10.5a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 0 0-2.5 0Zm3.4 0a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 0 0-2.5 0Zm3.4 0a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 0 0-2.5 0Z"
+		/>
+	</g>
+</svg>

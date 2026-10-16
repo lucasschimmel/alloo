@@ -28,7 +28,7 @@
 
 ## Deliberate simplifications
 
-One Start application serves the landing, public legal/support pages and private chat. No separate Astro app or Turborepo until separate deployments/consumers justify them. Bun workspaces can be introduced if a real second application appears.
+Two Start applications now serve the public website and messenger, following the user's explicit monorepo request. Bun workspaces orchestrate apps/landing and apps/web with backend/shared/UI packages. No Astro or additional task runner is introduced. See [monorepo architecture](monorepo.md).
 
 Private routes use `ssr: false`; public content uses SSR/prerender where appropriate. Convex Auth remains the sole session authority. No improvised second cookie session or copied Better Auth SSR adapter.
 

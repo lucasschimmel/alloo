@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { frontendReleaseIssues, releaseTargetIssues } from "../shared/release";
+import { fileURLToPath } from "node:url";
+import { frontendReleaseIssues, releaseTargetIssues } from "@alloo/shared/release";
 
+process.chdir(fileURLToPath(new URL("../", import.meta.url)));
 const issues = frontendReleaseIssues(process.env);
 if (issues.length) {
   console.error(`Release blocked: configure ${issues.join(", ")}. Values are never printed.`);

@@ -2,6 +2,8 @@
 
 ## 2.0.0 — Unreleased
 
+- Organize Bun workspaces into independent landing/web apps and backend/shared/UI packages; update CI, root commands and guarded two-Worker deployment.
+
 - Fix stale reply sends, pre-onboarding account deletion, aggregate sidebar read limits and reactive queries after deletion.
 - Clear device-local drafts/outbox after remote account deletion without affecting a newly active account.
 - Record final audit evidence and the outstanding production configuration, provider, device and recovery gates.

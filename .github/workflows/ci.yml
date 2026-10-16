@@ -6,6 +6,9 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      VITE_APP_ORIGIN: http://127.0.0.1:4173
+      VITE_LANDING_ORIGIN: http://127.0.0.1:4174
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,13 +38,16 @@ jobs:
           E2E_CONNECTED: '1'
           E2E_MEDIA: '1'
           E2E_BASE_URL: 'http://127.0.0.1:4173'
+          E2E_LANDING_URL: 'http://127.0.0.1:4174'
         run: |
           bun run build
-          bunx wrangler deploy --dry-run
+          bun run --sequential --filter "@alloo/web" --filter "@alloo/landing" deploy:dry-run
           bun run preview --port 4173 > /tmp/alloo-vite.log 2>&1 &
+          bun run preview:landing --port 4174 > /tmp/alloo-landing.log 2>&1 &
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:4173/healthz >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:4173/healthz >/dev/null && curl -fsS http://127.0.0.1:4174/healthz >/dev/null; then break; fi
             sleep 2
           done
           curl -fsS http://127.0.0.1:4173/healthz >/dev/null
+          curl -fsS http://127.0.0.1:4174/healthz >/dev/null
           bun run test:e2e

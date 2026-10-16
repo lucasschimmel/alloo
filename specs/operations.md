@@ -2,7 +2,7 @@
 
 ## Configuration ownership
 
-Frontend: `VITE_CONVEX_URL` is the public backend URL embedded at build time; `PORT` controls the development port. No server credential belongs in a `VITE_*` variable.
+Frontend: `VITE_CONVEX_URL` is the public backend URL embedded at build time; `WEB_PORT` (or `PORT`) and `LANDING_PORT` control frontend development ports. `VITE_APP_ORIGIN` must equal `ALLOO_PUBLIC_ORIGIN`; `VITE_LANDING_ORIGIN` identifies the public website. No server credential belongs in a `VITE_*` variable.
 
 Convex deployment configuration, entered via the provider's protected settings:
 
@@ -24,13 +24,13 @@ See current primary documentation: [Convex Auth](https://labs.convex.dev/auth), 
 
 ## Hosting
 
-Cloudflare Workers is the selected hosting target. The pinned Cloudflare Vite plugin and Wrangler build `dist/client` plus `dist/server/wrangler.json`. The custom `src/server.ts` preserves response headers and exposes `/healthz` (frontend liveness only, not backend/provider readiness). Local preview uses workerd; the connected browser suite is tested against that compiled runtime. Invocation logging is disabled to avoid recording private conversation URLs; platform error logs remain enabled.
+Cloudflare Workers is the selected hosting target. The pinned Cloudflare Vite plugin and Wrangler build `dist/client` plus `dist/server/wrangler.json` inside each app. The server entries in `apps/web/src` and `apps/landing/src` preserve response headers and expose `/healthz` (frontend liveness only, not backend/provider readiness). Local preview uses workerd; the connected browser suite is tested against that compiled runtime. Invocation logging is disabled to avoid recording private conversation URLs; platform error logs remain enabled.
 
 1. Provision an isolated production Convex deployment and configure its secrets/settings through protected provider controls. Deploy the backend before frontend release checks.
 2. Select the HTTPS frontend origin (a workers.dev origin is acceptable), then align Convex `SITE_URL` and provider redirects. No domain has been selected yet.
-3. Set build variables `ALLOO_PUBLIC_ORIGIN`, `VITE_CONVEX_URL` and `VITE_SUPPORT_EMAIL`. The latter is intentionally public. Do not place server credentials in frontend build variables.
+3. Set build variables `ALLOO_PUBLIC_ORIGIN`, `VITE_APP_ORIGIN`, `VITE_LANDING_ORIGIN`, `VITE_CONVEX_URL` and `VITE_SUPPORT_EMAIL`. The latter is intentionally public. Do not place server credentials in frontend build variables.
 4. `bun run release:check` validates frontend settings, invokes the CLI-selected production backend's internal `deployment:readiness`, and requires exact backend URL and frontend origin matches. It prints missing setting names only. Configuration presence does not prove provider delivery or successful recovery exercises.
-5. `bun run deploy:dry-run` packages the Worker without publishing. `bun run deploy` performs the guarded check, rebuilds and publishes using an authenticated Cloudflare account. Neither a remote deployment nor account setup was performed during this audit.
+5. `bun run deploy:dry-run` packages both Workers without publishing. `bun run deploy` performs the guarded check, rebuilds and publishes both apps using an authenticated Cloudflare account. Neither a remote deployment nor account setup was performed during this audit.
 
 Dotenv inheritance into Worker bindings is explicitly disabled. Convex local development settings stay separate from Worker runtime configuration. CI builds again after the isolated backend creates its public URL, then runs the compiled Worker browser contracts. Restart preview after rebuilding.
 
@@ -72,3 +72,7 @@ Dispatch is best-effort: generic payload, 60-second TTL, 10-second timeout, at m
 Drafts and outbox are device-local IndexedDB, not cross-device sync or encryption. Limits: 100 drafts, 100 queued messages, 50 MiB queued attachments; seven-day expiration swept on next use. Browser eviction also removes data. Text/reply drafts survive navigation/reload; files become durable when queued. One tab holds an expiring send lease; per-conversation FIFO prevents overtaking retrying/failed messages. Eight failed attempts stop automatic retries; manual retry/remove controls remain. No persisted auth credentials, private-response cache or guaranteed closed-app sending.
 
 Rollback frontend and worker together; older active workers may remain until tabs close. Keep additive backend APIs/schema until old tabs and queues drain. Verify on staging: permission rejection, disable/re-enable, muted/read/deleted/blocked messages, logout, provider expiration, duplicate delivery and click routing. Provider mocks do not certify live delivery.
+
+## Workspace migration
+
+See [monorepo.md](monorepo.md). Keep Convex SITE_URL, invitations and push on the web origin. Preserve an existing web origin to retain browser-local drafts and subscriptions; this refactor does not migrate storage across origins. The Worker names are alloo-web and alloo-landing. Root convex.json selects packages/backend/convex; run CLI commands at the root.

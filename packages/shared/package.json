@@ -1,0 +1,21 @@
+{
+  "name": "@alloo/shared",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "convex": "1.46.0",
+    "emoji-regex": "11.0.0",
+    "jpeg-js": "0.4.4",
+    "pngjs": "7.0.0"
+  },
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "devDependencies": {
+    "@types/pngjs": "6.0.5"
+  }
+}

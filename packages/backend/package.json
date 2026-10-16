@@ -1,0 +1,23 @@
+{
+  "name": "@alloo/backend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p convex/tsconfig.json"
+  },
+  "dependencies": {
+    "@auth/core": "0.41.3",
+    "@convex-dev/auth": "0.0.96",
+    "convex": "1.46.0",
+    "web-push": "3.6.7",
+    "@alloo/shared": "workspace:*"
+  },
+  "exports": {
+    "./api": "./convex/_generated/api.js",
+    "./dataModel": "./convex/_generated/dataModel.d.ts"
+  },
+  "devDependencies": {
+    "@types/web-push": "3.6.4"
+  }
+}

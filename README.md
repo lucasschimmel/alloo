@@ -2,6 +2,23 @@
 
 A quiet, French-first messenger rebuilt with TanStack Start, React and Convex Auth.
 
+## Workspace map
+
+```text
+apps/
+  landing/              Public SSR website, privacy and support
+  web/                  Messenger, auth UI, invitations, calls and push worker
+packages/
+  backend/convex/       Schema, authentication, API and scheduled jobs
+  shared/src/           Domain policies, validation and display contracts
+  ui/src/               Fonts, semantic CSS and shared visual primitives
+scripts/                Repository tooling and release checks
+tests/e2e/              Connected journeys across both applications
+specs/                  Product, architecture, audit and operations
+```
+
+One Bun lockfile; each application owns its dependencies, routes, build and Worker. Apps never import one another. See [workspace architecture](specs/monorepo.md).
+
 ## Run locally
 
 Requires Bun 1.4.2 and Node.js 24 or newer. Install the pinned dependencies:
@@ -26,7 +43,7 @@ bunx convex env set ALLOO_DEV_DIRECT_CALLS true
 bun run dev
 ```
 
-Open **http://127.0.0.1:3000**. Create an account with a password of at least 12 characters, then choose a unique username. Use two browser profiles to try messages and calls. The local auth script rotates local signing keys and invalidates existing local sessions; run it at initial setup or deliberate rotation, not on every restart. It refuses non-local deployments and never prints key values.
+Open **http://127.0.0.1:3001** for the landing and **http://127.0.0.1:3000/app** for the messenger. `bun run dev` starts both; `dev:web` and `dev:landing` start them separately. Create an account with a password of at least 12 characters, then choose a unique username. Use two browser profiles to try messages and calls. The local auth script rotates local signing keys and invalidates existing local sessions; run it at initial setup or deliberate rotation, not on every restart. It refuses non-local deployments and never prints key values.
 
 The CLI writes ignored local configuration. Do not copy V1 environment files or point this rebuild at the V1 production deployment. The development flags only apply with a loopback `SITE_URL`. Direct local calls use host ICE candidates and are **not** a substitute for TURN on the internet.
 
@@ -46,12 +63,12 @@ Google/GitHub and email verification/recovery are configured integrations: butto
 
 | Command | Purpose |
 |---|---|
-| `bun run dev` | Development frontend, port 3000 or `PORT` |
+| `bun run dev` | Both frontends, web 3000 and landing 3001 |
 | `bun run convex` | Backend watcher using the selected deployment |
 | `bun run verify` | Biome, TypeScript, domain tests and production build |
 | `bun run test:e2e` | Public browser contract; connected scenarios require flags below |
 | `bun scripts/check-critical-mutations.ts` | Twenty-four selected security/lifecycle fault injections |
-| `bun run build` / `bun run preview` | Compile / locally preview production output |
+| `bun run build` / `bun run preview` | Build both apps / preview web (`preview:landing` for the site) |
 | `bun audit` | Dependency vulnerability database check |
 
 Connected browser tests create disposable accounts in the selected backend. Use **only** the isolated local backend:
@@ -63,11 +80,11 @@ $env:E2E_MEDIA = '1'
 bun run test:e2e
 ```
 
-Restart the preview process after each rebuild to reload its SSR asset manifest. For the compiled frontend, start `bun run preview --port 4173` and set `E2E_BASE_URL=http://127.0.0.1:4173`. Chromium uses synthetic camera/microphone devices while real WebRTC transports media between independent browser contexts. This does not certify physical devices or cross-network TURN.
+Restart the preview process after each rebuild to reload its SSR asset manifest. For compiled checks, build with `VITE_APP_ORIGIN=http://127.0.0.1:4173` and `VITE_LANDING_ORIGIN=http://127.0.0.1:4174`. Start `bun run preview --port 4173` and `bun run preview:landing --port 4174` in separate terminals. Set `E2E_BASE_URL=http://127.0.0.1:4173` and `E2E_LANDING_URL=http://127.0.0.1:4174`. Chromium uses synthetic camera/microphone devices while real WebRTC transports media between independent browser contexts. This does not certify physical devices or cross-network TURN.
 
 ## Structure
 
-`src/routes` owns public routing and the client-only private entry; `src/features` owns auth, conversations, messages, profile and calls. `src/components/ui` contains shared accessible primitives. `convex` owns authorization, transactions, realtime queries, actions and scheduled cleanup. `shared` holds limits and image decoding. `specs` contains the product contracts, decisions and release gates.
+`apps/web/src/features` owns private product features; `apps/landing/src/routes` owns public pages. Backend functions live in `packages/backend/convex`. Shared contracts and visual foundations use explicit `@alloo/shared/*` and `@alloo/ui/*` exports. Root `convex.json` preserves CLI deployment configuration while selecting the moved backend. Run Convex commands from the root.
 
 Native Convex subscriptions are the single server-state cache. There is no extra REST backend, session store or duplicated message store. Public pages render on the server; authenticated data stays out of SSR.
 

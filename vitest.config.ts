@@ -1,8 +1,16 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
+const root = process.env.ALLOO_TEST_ROOT ?? fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
-  test: {
-    include: ["convex/**/*.test.ts", "src/**/*.test.ts", "shared/**/*.test.ts"],
-    environment: "node",
+  resolve: {
+    alias: [
+      { find: /^@alloo\/shared\/(.+)$/, replacement: `${root}/packages/shared/src/$1` },
+      {
+        find: /^@alloo\/backend\/(.+)$/,
+        replacement: `${root}/packages/backend/convex/_generated/$1`,
+      },
+    ],
   },
+  test: { include: ["packages/**/*.test.ts", "apps/**/*.test.ts"], environment: "node" },
 });

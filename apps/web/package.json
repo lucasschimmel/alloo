@@ -1,0 +1,41 @@
+{
+  "name": "@alloo/web",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "deploy": "bun run ../../scripts/check-release.ts && bun run build && wrangler deploy",
+    "deploy:dry-run": "wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.9.0",
+    "@convex-dev/auth": "0.0.96",
+    "@tanstack/react-router": "1.170.44",
+    "@tanstack/react-start": "1.169.2",
+    "@tanstack/react-virtual": "3.14.20",
+    "convex": "1.46.0",
+    "idb": "8.0.4",
+    "lucide-react": "1.57.0",
+    "qrcode.react": "4.2.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "xstate": "5.33.2",
+    "@alloo/ui": "workspace:*",
+    "@alloo/backend": "workspace:*",
+    "@alloo/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.64.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.4",
+    "wrangler": "4.151.0",
+    "typescript": "7.0.2"
+  }
+}

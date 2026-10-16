@@ -3,20 +3,33 @@
   "files": {
     "includes": [
       "**",
-      "!!node_modules",
-      "!!dist",
-      "!!test-results",
-      "!!playwright-report",
-      "!!.convex",
-      "!!.wrangler",
-      "!!.tanstack",
-      "!!src/routeTree.gen.ts",
-      "!!convex/_generated",
-      "!!.claude",
+      "!!**/node_modules",
+      "!!**/dist",
+      "!!**/test-results",
+      "!!**/playwright-report",
+      "!!**/.convex",
+      "!!**/.wrangler",
+      "!!**/.tanstack",
+      "!!**/routeTree.gen.ts",
+      "!!**/_generated",
+      "!!**/.claude",
       "!!specs/visual-reference.md"
     ]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "lineWidth": 100 },
-  "linter": { "enabled": true, "rules": { "preset": "recommended" } },
-  "css": { "parser": { "tailwindDirectives": true } }
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
 }

@@ -8,6 +8,8 @@ These documents define the product contract. The [latest V2 audit](final-v2-audi
 
 User decisions override proposals. A decision marked **selected** is the implementation default; **candidate** requires a prototype; **deferred** is outside the first release. Unresolved product choices are collected in [decisions.md](decisions.md). Change a requirement and its test contract together.
 
+See [monorepo architecture](monorepo.md) for the current apps/packages layout.
+
 ## Reading order
 
 1. [Project](project.md): purpose, audience, scope, release policy.

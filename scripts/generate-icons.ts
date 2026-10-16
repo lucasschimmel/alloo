@@ -1,11 +1,12 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 
 const browser = await chromium.launch();
 try {
+  await copyFile("apps/web/public/icon.svg", "apps/landing/public/icon.svg");
   const page = await browser.newPage();
   for (const size of [192, 512]) {
-    const svg = await readFile("public/icon.svg", "utf8");
+    const svg = await readFile("apps/web/public/icon.svg", "utf8");
     const data = await page.evaluate(
       async ({ svg, size }) => {
         const image = new Image();
@@ -18,7 +19,8 @@ try {
       },
       { svg, size },
     );
-    await writeFile(`public/icon-${size}.png`, Buffer.from(data, "base64"));
+    for (const app of ["web", "landing"])
+      await writeFile(`apps/${app}/public/icon-${size}.png`, Buffer.from(data, "base64"));
   }
 } finally {
   await browser.close();

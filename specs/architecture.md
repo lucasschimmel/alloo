@@ -1,18 +1,22 @@
 # Architecture
 
-## Proposed structure
+See [monorepo architecture](monorepo.md) for the current topology. Public pages now belong to apps/landing, with their own router and Worker.
+
+## Current structure
 
 ```text
-src/routes/                    URL, layout, public metadata and composition
-src/features/auth/             account and session UI
-src/features/profile/          onboarding and profile editing
-src/features/conversations/    navigation, membership, invitations
-src/features/messages/         timeline, composer, anchors, reactions
-src/features/calls/            actor, media adapter, presentation
-src/components/ui/             shared accessible visual primitives
-src/lib/                       narrow technical integrations
-shared/                        pure domain rules genuinely used on both sides
-convex/                        schema, public endpoints, internal services/jobs
+apps/landing/src/routes/                public SSR pages and metadata
+packages/ui/src/                       shared visual foundations
+apps/web/src/routes/                    URL, layout, public metadata and composition
+apps/web/src/features/auth/             account and session UI
+apps/web/src/features/profile/          onboarding and profile editing
+apps/web/src/features/conversations/    navigation, membership, invitations
+apps/web/src/features/messages/         timeline, composer, anchors, reactions
+apps/web/src/features/calls/            actor, media adapter, presentation
+apps/web/src/components/ui/             shared accessible visual primitives
+apps/web/src/lib/                       narrow technical integrations
+packages/shared/src/           pure domain rules genuinely used on both sides
+packages/backend/convex/        schema, public endpoints, internal services/jobs
 tests/                         connected E2E and cross-domain scenarios
 specs/                         product and architecture contracts
 ```
