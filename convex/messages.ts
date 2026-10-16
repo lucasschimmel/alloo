@@ -2,10 +2,12 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { messageLabel } from "../shared/message-label";
+import { messageFingerprint } from "../shared/message-request";
 import { boundedPage, cleanText, LIMITS, validReaction } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { blocked, member, publicProfile, quota, readableMember } from "./access";
+import { deleteAttachment } from "./attachmentRecords";
 
 async function hidden(ctx: QueryCtx, userId: Id<"users">, id: Id<"messages">) {
   return !!(await ctx.db
@@ -23,11 +25,16 @@ async function decorate(ctx: QueryCtx, userId: Id<"users">, msg: Doc<"messages">
     .query("reactions")
     .withIndex("by_message", (q) => q.eq("messageId", msg._id))
     .take(100);
+  const { sendFingerprint: _fingerprint, ...visible } = msg;
   return {
-    ...msg,
-    body: messageLabel(msg),
+    ...visible,
+    body: msg.kind === "text" && msg.deletedAt === undefined ? msg.body : messageLabel(msg),
     author: await publicProfile(ctx, msg.userId),
     quote,
+    attachment:
+      msg.attachmentId && msg.deletedAt === undefined
+        ? await attachmentMetadata(ctx, msg.attachmentId)
+        : null,
     reactions: [...new Set(reactions.map((r) => r.emoji))]
       .map((emoji) => ({
         emoji,
@@ -36,6 +43,10 @@ async function decorate(ctx: QueryCtx, userId: Id<"users">, msg: Doc<"messages">
       }))
       .filter((r) => r.count),
   };
+}
+async function attachmentMetadata(ctx: QueryCtx, id: Id<"attachments">) {
+  const file = await ctx.db.get(id);
+  return file ? { id: file._id, name: file.name, size: file.size } : null;
 }
 export const list = query({
   args: { id: v.id("conversations"), paginationOpts: paginationOptsValidator },
@@ -61,7 +72,8 @@ export const anchor = query({
     if (!(await getAuthUserId(ctx))) return null;
     const msg = await ctx.db.get(messageId);
     if (!msg) return null;
-    const own = await member(ctx, msg.conversationId);
+    const own = await readableMember(ctx, msg.conversationId);
+    if (!own) return null;
     return (await hidden(ctx, own.userId, msg._id)) ? null : await decorate(ctx, own.userId, msg);
   },
 });
@@ -78,7 +90,8 @@ export const pins = query({
       .take(10);
     const result = [];
     for (const m of rows)
-      if (!(await hidden(ctx, own.userId, m._id))) result.push({ ...m, body: messageLabel(m) });
+      if (!(await hidden(ctx, own.userId, m._id)))
+        result.push({ _id: m._id, body: messageLabel(m) });
     return result;
   },
 });
@@ -88,12 +101,14 @@ export const send = mutation({
     body: v.string(),
     operationId: v.string(),
     replyId: v.optional(v.id("messages")),
+    attachmentId: v.optional(v.id("attachments")),
   },
   handler: async (ctx, args) => {
     const own = await member(ctx, args.id),
-      body = cleanText(args.body, LIMITS.message);
+      body = args.attachmentId && !args.body.trim() ? "" : cleanText(args.body, LIMITS.message);
     if (args.operationId.length < 8 || args.operationId.length > 100)
       throw new ConvexError("INVALID_INPUT");
+    const fingerprint = await messageFingerprint(args.id, body, args.replyId, args.attachmentId);
     const old = await ctx.db
       .query("messages")
       .withIndex("by_operation", (q) =>
@@ -101,7 +116,14 @@ export const send = mutation({
       )
       .unique();
     if (old) {
-      if (old.conversationId !== args.id || old.body !== body || old.replyId !== args.replyId)
+      if (
+        old.sendFingerprint
+          ? old.sendFingerprint !== fingerprint
+          : old.conversationId !== args.id ||
+            old.body !== body ||
+            old.replyId !== args.replyId ||
+            old.attachmentId !== args.attachmentId
+      )
         throw new ConvexError("CONFLICT");
       return old._id;
     }
@@ -115,8 +137,24 @@ export const send = mutation({
         if (await blocked(ctx, own.userId, m.userId)) throw new ConvexError("BLOCKED");
     if (args.replyId) {
       const reply = await ctx.db.get(args.replyId);
-      if (!reply || reply.conversationId !== args.id || (await hidden(ctx, own.userId, reply._id)))
+      if (
+        !reply ||
+        reply.deletedAt !== undefined ||
+        reply.conversationId !== args.id ||
+        (await hidden(ctx, own.userId, reply._id))
+      )
         throw new ConvexError("INVALID_REPLY");
+    }
+    if (args.attachmentId) {
+      const file = await ctx.db.get(args.attachmentId);
+      if (
+        !file ||
+        file.userId !== own.userId ||
+        file.conversationId !== args.id ||
+        file.messageId ||
+        (file.expiresAt ?? 0) <= Date.now()
+      )
+        throw new ConvexError("INVALID_ATTACHMENT");
     }
     await quota(ctx, own.userId, "message", 60);
     const id = await ctx.db.insert("messages", {
@@ -124,10 +162,14 @@ export const send = mutation({
       userId: own.userId,
       body,
       operationId: args.operationId,
+      sendFingerprint: fingerprint,
+      attachmentId: args.attachmentId,
       replyId: args.replyId,
       kind: "text",
       pinned: false,
     });
+    if (args.attachmentId)
+      await ctx.db.patch(args.attachmentId, { messageId: id, expiresAt: undefined });
     const now = Date.now();
     await ctx.db.patch(args.id, { updatedAt: now });
     for (const m of members) await ctx.db.patch(m._id, { updatedAt: now });
@@ -159,7 +201,7 @@ export const react = mutation({
   handler: async (ctx, { messageId, emoji }) => {
     if (!validReaction(emoji)) throw new ConvexError("INVALID_REACTION");
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new ConvexError("NOT_FOUND");
+    if (!msg || msg.deletedAt !== undefined) throw new ConvexError("NOT_FOUND");
     const own = await member(ctx, msg.conversationId);
     await quota(ctx, own.userId, "reaction", 60);
     if (await hidden(ctx, own.userId, messageId)) throw new ConvexError("NOT_FOUND");
@@ -178,7 +220,7 @@ export const pin = mutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, { messageId }) => {
     const msg = await ctx.db.get(messageId);
-    if (!msg) throw new ConvexError("NOT_FOUND");
+    if (!msg || msg.deletedAt !== undefined) throw new ConvexError("NOT_FOUND");
     const own = await member(ctx, msg.conversationId),
       c = await ctx.db.get(msg.conversationId);
     if (c?.kind === "group" && own.role !== "admin") throw new ConvexError("FORBIDDEN");
@@ -192,5 +234,76 @@ export const pin = mutation({
       if (pins.length >= 10) throw new ConvexError("PIN_LIMIT");
     }
     await ctx.db.patch(messageId, { pinned: !msg.pinned });
+  },
+});
+
+export const edit = mutation({
+  args: { messageId: v.id("messages"), body: v.string(), revision: v.number() },
+  handler: async (ctx, { messageId, body: input, revision }) => {
+    const msg = await ctx.db.get(messageId);
+    if (!msg || msg.deletedAt !== undefined) throw new ConvexError("NOT_FOUND");
+    const own = await member(ctx, msg.conversationId);
+    if (msg.userId !== own.userId || msg.kind !== "text") throw new ConvexError("FORBIDDEN");
+    const body = msg.attachmentId && !input.trim() ? "" : cleanText(input, LIMITS.message);
+    if (body === msg.body) return;
+    if ((msg.revision ?? 0) !== revision) throw new ConvexError("EDIT_CONFLICT");
+    await quota(ctx, own.userId, "edit", 60);
+    await ctx.db.patch(messageId, {
+      body,
+      revision: revision + 1,
+      editedAt: Date.now(),
+      sendFingerprint:
+        msg.sendFingerprint ??
+        (await messageFingerprint(msg.conversationId, msg.body, msg.replyId, msg.attachmentId)),
+    });
+  },
+});
+export const remove = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, { messageId }) => {
+    const msg = await ctx.db.get(messageId);
+    if (!msg) throw new ConvexError("NOT_FOUND");
+    const own = await member(ctx, msg.conversationId);
+    if (msg.userId !== own.userId || msg.kind !== "text") throw new ConvexError("FORBIDDEN");
+    if (msg.deletedAt !== undefined) return;
+    await quota(ctx, own.userId, "delete", 60);
+    const reactions = await ctx.db
+      .query("reactions")
+      .withIndex("by_message", (q) => q.eq("messageId", messageId))
+      .take(100);
+    for (const row of reactions) await ctx.db.delete(row._id);
+    if (msg.attachmentId) await deleteAttachment(ctx, msg.attachmentId);
+    await ctx.db.patch(messageId, {
+      sendFingerprint:
+        msg.sendFingerprint ??
+        (await messageFingerprint(msg.conversationId, msg.body, msg.replyId, msg.attachmentId)),
+      attachmentId: undefined,
+      body: "",
+      deletedAt: Date.now(),
+      pinned: false,
+      replyId: undefined,
+    });
+  },
+});
+
+export const search = query({
+  args: { id: v.id("conversations"), text: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { id, text, paginationOpts }) => {
+    const empty = { page: [], isDone: true, continueCursor: "" };
+    const own = await readableMember(ctx, id);
+    const term = text.trim();
+    if (!own || !term || term.length > 200 || (term.match(/[\p{L}\p{N}]+/gu)?.length ?? 0) > 16)
+      return empty;
+    const page = await ctx.db
+      .query("messages")
+      .withSearchIndex("search_body", (q) =>
+        q.search("body", term).eq("conversationId", id).eq("kind", "text"),
+      )
+      .paginate(boundedPage(paginationOpts, 20));
+    const rows = [];
+    for (const msg of page.page)
+      if (msg.deletedAt === undefined && !(await hidden(ctx, own.userId, msg._id)))
+        rows.push(await decorate(ctx, own.userId, msg));
+    return { ...page, page: rows };
   },
 });

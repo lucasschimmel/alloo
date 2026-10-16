@@ -79,7 +79,7 @@ describe("V2 domain contracts", () => {
       body: "private",
       operationId: "operation-001",
     });
-    await expect(e.query(api.messages.anchor, { messageId })).rejects.toThrow("FORBIDDEN");
+    expect(await e.query(api.messages.anchor, { messageId })).toBeNull();
   });
   it("T-VISIBILITY hides timeline, quote and sidebar preview for one user only", async () => {
     const { a, b, ids } = await setup();

@@ -50,7 +50,7 @@ Google/GitHub and email verification/recovery are configured integrations: butto
 | `bun run convex` | Backend watcher using the selected deployment |
 | `bun run verify` | Biome, TypeScript, domain tests and production build |
 | `bun run test:e2e` | Public browser contract; connected scenarios require flags below |
-| `bun scripts/check-critical-mutations.ts` | Thirteen isolated security/lifecycle/translation fault injections |
+| `bun scripts/check-critical-mutations.ts` | Seventeen isolated security/lifecycle/translation fault injections |
 | `bun run build` / `bun run preview` | Compile / locally preview production output |
 | `bun audit` | Dependency vulnerability database check |
 
@@ -78,3 +78,7 @@ Follow [operations](specs/operations.md). Cloudflare Workers is configured and l
 The previous code and local settings are preserved outside the repository; see [V1 recovery](specs/rebuild-and-recovery.md).
 
 See [the final production audit](specs/production-audit.md) for confirmed findings, corrections and remaining external launch gates. Blocking is capped at 200 people per account to preserve bounded group admission checks.
+
+### Expanded messaging
+
+Private attachments (one file/message, up to 10 MiB), paginated text search within a conversation, author editing and delete-for-all are implemented. Files require authentication on every download and are never served by a permanent public URL. See [messaging expansion](specs/messaging-expansion.md) for supported extensions, expiry, quotas and deployment order. Files are download-only and are not antivirus-scanned.

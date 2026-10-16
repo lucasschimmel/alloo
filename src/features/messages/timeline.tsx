@@ -1,20 +1,25 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useConvex, useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowDown, ArrowLeft, MoreHorizontal, Phone, Video } from "lucide-react";
+import { ArrowDown, ArrowLeft, MoreHorizontal, Phone, Search, Video } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { attachmentName } from "../../../shared/attachments";
 import { dateLabel, lastSeenLabel, sameDay } from "../../../shared/message-label";
 import { LIMITS } from "../../../shared/policy";
 import { Avatar } from "../../components/ui/avatar";
 import { Modal } from "../../components/ui/modal";
 import { explain } from "../../lib/errors";
 import { useCalls } from "../calls/call-provider";
+import { useAttachmentTransfer } from "./attachment-transfer";
 import { MessageComposer, type Pending } from "./message-composer";
 import { type Message, MessageItem } from "./message-item";
+import { MessageProfile } from "./message-profile";
+import { MessageSearch } from "./message-search";
 
 type Details = NonNullable<FunctionReturnType<typeof api.conversations.details>>;
+// This coordinator keeps virtual scroll, read cursors and send lifetimes together; rendering is delegated to message components.
 export function Timeline({
   detail,
   userId,
@@ -31,7 +36,6 @@ export function Timeline({
   typing: (value: boolean) => void;
 }) {
   const id = detail._id,
-    client = useConvex(),
     { start } = useCalls();
   const { results, status, loadMore } = usePaginatedQuery(
     api.messages.list,
@@ -43,14 +47,22 @@ export function Timeline({
     presence = useQuery(api.presence.list, { id }),
     send = useMutation(api.messages.send),
     markRead = useMutation(api.messages.markRead);
+  const transfer = useAttachmentTransfer();
+  const discard = useMutation(api.attachmentRecords.discard);
+  const [file, setFile] = useState<File | null>(null);
+  const sending = useRef(false);
+  const [searching, setSearching] = useState(false);
   const [draft, setDraft] = useState(""),
-    [reply, setReply] = useState<Message | null>(null),
+    [replyId, setReplyId] = useState<Id<"messages"> | null>(null),
     [failed, setFailed] = useState<Pending[]>([]),
     [busy, setBusy] = useState(false),
     [atBottom, setAtBottom] = useState(true),
-    [anchor, setAnchor] = useState<Message | null>(null),
+    [anchorId, setAnchor] = useState<Id<"messages"> | null>(null),
     [person, setPerson] = useState<Message["author"] | null>(null),
     [now, setNow] = useState(Date.now());
+  const reply = useQuery(api.messages.anchor, replyId ? { messageId: replyId } : "skip") ?? null;
+  const setReply = (message: Message | null) => setReplyId(message?._id ?? null);
+  const anchor = useQuery(api.messages.anchor, anchorId ? { messageId: anchorId } : "skip");
   const scroll = useRef<HTMLDivElement>(null),
     following = useRef(true),
     lastCount = useRef(0),
@@ -99,21 +111,33 @@ export function Timeline({
     return () => document.removeEventListener("visibilitychange", update);
   }, [latest, atBottom, markRead, notify]);
   async function submit(item?: Pending) {
-    if (busy) return;
+    if (sending.current) return;
     const pending = item ?? {
       body: draft.trim(),
       operationId: crypto.randomUUID(),
-      replyId: reply?._id,
+      file: file ?? undefined,
+      replyId: reply?.deletedAt === undefined ? reply?._id : undefined,
     };
-    if (!pending.body) return;
+    if (!pending.body && !pending.file && !pending.attachmentId) return;
+    if (pending.file && !pending.attachmentId && !transfer.ready) return;
+    sending.current = true;
     if (!item) {
       setDraft("");
+      setFile(null);
       setReply(null);
       typing(false);
     }
     setBusy(true);
     try {
-      await send({ id, ...pending });
+      if (pending.file && !pending.attachmentId)
+        pending.attachmentId = (await transfer.upload(id, pending.file)).id;
+      await send({
+        id,
+        body: pending.body,
+        operationId: pending.operationId,
+        replyId: pending.replyId,
+        attachmentId: pending.attachmentId,
+      });
       setFailed((rows) => rows.filter((x) => x.operationId !== pending.operationId));
       following.current = true;
       setAtBottom(true);
@@ -121,6 +145,7 @@ export function Timeline({
       if (!item) setFailed((rows) => [...rows, pending]);
       notify(explain(e));
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -132,13 +157,7 @@ export function Timeline({
       virtualizer.scrollToIndex(index, { align: "center" });
       return;
     }
-    try {
-      const target = await client.query(api.messages.anchor, { messageId });
-      if (target) setAnchor(target);
-      else notify("Ce message n’est plus disponible.");
-    } catch (e) {
-      notify(explain(e));
-    }
+    setAnchor(messageId);
   }
   const typingPeople =
     presence?.filter((p) => p.userId !== userId && p.typingUntil > now && p.expiresAt > now) ?? [];
@@ -166,6 +185,14 @@ export function Timeline({
           </p>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Rechercher dans la conversation"
+            onClick={() => setSearching(true)}
+          >
+            <Search size={18} />
+          </button>
           {detail.kind === "dm" && (
             <>
               <button
@@ -306,12 +333,37 @@ export function Timeline({
           </button>
         </div>
       )}
+      {searching && (
+        <MessageSearch
+          id={id}
+          onClose={() => setSearching(false)}
+          onSelect={(messageId) => {
+            setSearching(false);
+            setAnchor(messageId);
+          }}
+        />
+      )}
       <MessageComposer
+        file={file}
+        setFile={(next) => {
+          if (!next) {
+            setFile(null);
+            return;
+          }
+          try {
+            attachmentName(next.name);
+            if (!next.size || next.size > LIMITS.attachmentBytes)
+              throw new Error("INVALID_ATTACHMENT");
+            setFile(next);
+          } catch (error) {
+            notify(explain(error));
+          }
+        }}
         draft={draft}
         setDraft={setDraft}
-        reply={reply}
+        reply={reply?.deletedAt === undefined ? reply : null}
         failed={failed}
-        busy={busy}
+        busy={busy || (!!file && !transfer.ready)}
         typing={typing}
         typingLabel={
           typingPeople.length
@@ -322,37 +374,27 @@ export function Timeline({
         title={title}
         onSubmit={submit}
         onCancelReply={() => setReply(null)}
-        onRemoveFailed={(operationId) =>
-          setFailed((rows) => rows.filter((x) => x.operationId !== operationId))
-        }
+        onRemoveFailed={(operationId) => {
+          const pending = failed.find((row) => row.operationId === operationId);
+          if (pending?.attachmentId)
+            void discard({ id: pending.attachmentId }).catch((error) => notify(explain(error)));
+          setFailed((rows) => rows.filter((x) => x.operationId !== operationId));
+        }}
+      />
+      <MessageProfile
+        person={person}
+        onClose={() => setPerson(null)}
+        isAdmin={detail.members.find((m) => m.userId === person?.userId)?.role === "admin"}
+        online={presence?.some((p) => p.userId === person?.userId && p.expiresAt > now) ?? false}
+        lastSeen={presence?.find((p) => p.userId === person?.userId)?.lastSeenAt}
       />
       <Modal
-        open={!!person}
-        onClose={() => setPerson(null)}
-        title={`Profil de ${person?.name ?? ""}`}
-        description={person?.username ? `@${person.username}` : ""}
-      >
-        {person && (
-          <div className="stack">
-            <Avatar name={person.name} userId={person.userId} />
-            <p>{person.bio || "Cette personne n’a pas encore ajouté de présentation."}</p>
-            {detail.members.find((m) => m.userId === person.userId)?.role === "admin" && (
-              <strong>Administrateur</strong>
-            )}
-            <p>
-              {presence?.some((p) => p.userId === person.userId && p.expiresAt > now)
-                ? "En ligne"
-                : lastSeenLabel(presence?.find((p) => p.userId === person.userId)?.lastSeenAt)}
-            </p>
-          </div>
-        )}
-      </Modal>
-      <Modal
-        open={!!anchor}
+        open={!!anchorId}
         onClose={() => setAnchor(null)}
         title="Message dans l’historique"
         description="Ce message se situe en dehors de la portion actuellement chargée."
       >
+        {anchorId && !anchor && <p>Ce message n’est plus disponible.</p>}
         {anchor && (
           <MessageItem
             message={anchor}

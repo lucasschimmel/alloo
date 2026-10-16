@@ -2,6 +2,9 @@ import type { PaginationOptions } from "convex/server";
 import emojiRegex from "emoji-regex";
 export const LIMITS = {
   message: 4000,
+  attachmentBytes: 10 * 1024 * 1024,
+  attachmentExpiryMs: 3_600_000,
+  attachmentUploadMs: 60_000,
   bio: 160,
   name: 60,
   group: 100,

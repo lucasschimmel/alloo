@@ -26,6 +26,8 @@ User decisions override proposals. A decision marked **selected** is the impleme
 14. [Rebuild and recovery](rebuild-and-recovery.md): preserved V1 and safe recovery.
 15. [Visual reference](visual-reference.md): captured V1 tokens and icon source.
 
+16. [Messaging expansion](messaging-expansion.md): attachments, search, editing and deletion contracts.
+
 ## Working rules
 
 - Build one vertical slice at a time, starting with authenticated deployment and the risky prototypes.

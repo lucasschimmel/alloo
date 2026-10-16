@@ -1,11 +1,20 @@
-import { Send, X } from "lucide-react";
+import { Paperclip, Send, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { ATTACHMENT_ACCEPT } from "../../../shared/attachments";
 import { LIMITS } from "../../../shared/policy";
 import { EmojiPicker } from "./emoji-picker";
 import type { Message } from "./message-item";
-export type Pending = { body: string; operationId: string; replyId?: Id<"messages"> };
+export type Pending = {
+  body: string;
+  operationId: string;
+  replyId?: Id<"messages">;
+  attachmentId?: Id<"attachments">;
+  file?: File;
+};
 export function MessageComposer({
+  file,
+  setFile,
   draft,
   setDraft,
   reply,
@@ -19,6 +28,8 @@ export function MessageComposer({
   onRemoveFailed,
   onCancelReply,
 }: {
+  file: File | null;
+  setFile: (file: File | null) => void;
   draft: string;
   setDraft: (value: string) => void;
   reply: Message | null;
@@ -33,6 +44,7 @@ export function MessageComposer({
   onCancelReply: () => void;
 }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {
     if (!input.current) return;
@@ -54,15 +66,41 @@ export function MessageComposer({
         )}
         {failed.map((item) => (
           <div className="failed-send" key={item.operationId}>
-            <span>Non envoyé : {item.body.slice(0, 50)}</span>
+            <span>Non envoyé : {item.body.slice(0, 50) || item.file?.name}</span>
             <button type="button" disabled={busy} onClick={() => void onSubmit(item)}>
               Réessayer
             </button>
-            <button type="button" onClick={() => onRemoveFailed(item.operationId)}>
+            <button type="button" disabled={busy} onClick={() => onRemoveFailed(item.operationId)}>
               Retirer
             </button>
           </div>
         ))}
+        {file && (
+          <div className="context-strip">
+            <span>
+              {file.name} · {Math.ceil(file.size / 1024)} Ko
+            </span>
+            <button
+              type="button"
+              aria-label="Retirer la pièce jointe"
+              disabled={busy}
+              onClick={() => setFile(null)}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <input
+          ref={fileInput}
+          hidden
+          type="file"
+          aria-label="Pièce jointe"
+          accept={ATTACHMENT_ACCEPT}
+          onChange={(e) => {
+            setFile(e.target.files?.[0] ?? null);
+            e.target.value = "";
+          }}
+        />
         <div className="typing-label" aria-live="polite">
           {typingLabel}
         </div>
@@ -75,6 +113,14 @@ export function MessageComposer({
         >
           <button type="button" aria-label="Insérer un emoji" onClick={() => setEmojiOpen(true)}>
             ☺
+          </button>
+          <button
+            type="button"
+            aria-label="Joindre un fichier"
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            <Paperclip size={18} />
           </button>
           <textarea
             ref={input}
@@ -96,7 +142,7 @@ export function MessageComposer({
           />
           <button
             className="primary"
-            disabled={!draft.trim() || busy}
+            disabled={(!draft.trim() && !file) || busy}
             type="submit"
             aria-label="Envoyer le message"
           >
@@ -104,7 +150,7 @@ export function MessageComposer({
           </button>
         </form>
         <div className="composer-hint">
-          Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne
+          Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne · 1 fichier, 10 Mo max.
           {draft.length >= LIMITS.message - 200 && (
             <span role="status"> · {LIMITS.message - draft.length} caractères restants</span>
           )}

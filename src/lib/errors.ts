@@ -1,6 +1,11 @@
 export function explain(error: unknown) {
   const text = error instanceof Error ? error.message : String(error);
   const messages: Record<string, string> = {
+    INVALID_ATTACHMENT:
+      "Choisissez un fichier autorisé de moins de 10 Mo. Une pièce jointe non envoyée expire après une heure.",
+    ATTACHMENT_TOO_LARGE: "Ce fichier dépasse la limite de 10 Mo.",
+    UPLOAD_TIMEOUT: "Le transfert a pris trop de temps. Réessayez.",
+    EDIT_CONFLICT: "Ce message a changé dans un autre onglet. Fermez puis rouvrez l’éditeur.",
     BLOCK_LIMIT:
       "La limite de 200 personnes bloquées est atteinte pour un membre concerné. Contactez le support.",
     TRANSLATION_UNAVAILABLE:

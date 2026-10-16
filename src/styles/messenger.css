@@ -159,6 +159,8 @@
 }
 .message-actions {
   display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 2px;
   align-items: center;
   margin-top: 3px;
@@ -378,4 +380,34 @@
   background: transparent;
   border-radius: 2px;
   text-align: inherit;
+}
+
+.search-results {
+  margin-top: 1rem;
+  max-height: 50vh;
+  overflow: auto;
+}
+.search-result {
+  display: grid;
+  gap: 0.4rem;
+  text-align: left;
+  padding: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.attachment-download {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  text-align: left;
+  padding: 0.6rem;
+  margin-block: 0.4rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.attachment-download span {
+  min-width: 0;
+}
+.attachment-download small {
+  display: block;
 }

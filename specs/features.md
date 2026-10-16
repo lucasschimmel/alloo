@@ -24,8 +24,8 @@ V1 status is based on source inspection and the previous audit, not a production
 | F18 | Block and report | Missing | Before public release: block new DM/call/invite attempts; explicit shared-group behavior and actionable operator queue | T-ABUSE |
 | F19 | Account export/deletion and sessions | Missing | Before public release: reauthentication where appropriate, revocation, bounded deletion, export access control | T-ACCOUNT |
 | F20 | Privacy, retention, support and operations | Missing/incomplete | Before public release: policy matches actual processing and tested restore/rollback | T-OPS |
-| F21 | Attachments and message search | Missing | Later: approved limits, private media delivery and access-filtered search | T-FUTURE |
-| F22 | Editing and deletion for everyone | Missing | Later: decide time window, tombstones, quote/search/update semantics | T-FUTURE |
+| F21 | Attachments and message search | Missing | Implemented: one private file up to 10 MiB, indexed conversation search; see messaging-expansion.md | T-MSG-FILE / T-MSG-SEARCH |
+| F22 | Editing and deletion for everyone | Missing | Implemented: author-only, no time window, revision checks, content erasure and reactive quotes/search | T-MSG-EDIT / T-MSG-DELETE |
 | F23 | Persistent drafts, offline outbox, push/mute | Missing | Later: account isolation, idempotency, consent, cache cleanup and notification privacy | T-OFFLINE |
 | F24 | Group calls, native apps, E2EE, phone/passkeys/2FA | Missing | Deferred; require separate product and architecture decisions | T-FUTURE |
 

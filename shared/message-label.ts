@@ -3,7 +3,10 @@ import type { Doc } from "../convex/_generated/dataModel";
 export function durationLabel(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
-export function messageLabel(message: Pick<Doc<"messages">, "body" | "event" | "callData">) {
+export function messageLabel(
+  message: Pick<Doc<"messages">, "body" | "event" | "callData" | "deletedAt" | "attachmentId">,
+) {
+  if (message.deletedAt !== undefined) return "Message supprimé";
   const call = message.callData;
   if (call) {
     const outcomes = {
@@ -16,7 +19,7 @@ export function messageLabel(message: Pick<Doc<"messages">, "body" | "event" | "
     return `Appel ${call.kind === "audio" ? "audio" : "vidéo"} ${outcomes[call.outcome]}${call.durationSeconds ? ` · ${durationLabel(call.durationSeconds)}` : ""}`;
   }
   const e = message.event;
-  if (!e) return message.body;
+  if (!e) return message.body || (message.attachmentId ? "Pièce jointe" : "");
   switch (e.action) {
     case "created":
       return `${e.actorName} a créé le groupe « ${e.title} ».`;

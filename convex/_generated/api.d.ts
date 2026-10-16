@@ -10,6 +10,8 @@
 
 import type * as access from "../access.js";
 import type * as accounts from "../accounts.js";
+import type * as attachmentHttp from "../attachmentHttp.js";
+import type * as attachmentRecords from "../attachmentRecords.js";
 import type * as auth from "../auth.js";
 import type * as authIssuance from "../authIssuance.js";
 import type * as authSettings from "../authSettings.js";
@@ -39,6 +41,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   access: typeof access;
   accounts: typeof accounts;
+  attachmentHttp: typeof attachmentHttp;
+  attachmentRecords: typeof attachmentRecords;
   auth: typeof auth;
   authIssuance: typeof authIssuance;
   authSettings: typeof authSettings;

@@ -42,6 +42,11 @@ export default defineSchema({
     body: v.string(),
     operationId: v.string(),
     replyId: v.optional(v.id("messages")),
+    attachmentId: v.optional(v.id("attachments")),
+    sendFingerprint: v.optional(v.string()),
+    revision: v.optional(v.number()),
+    editedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
     kind: v.union(v.literal("text"), v.literal("system"), v.literal("call")),
     event: v.optional(
       v.object({
@@ -79,7 +84,20 @@ export default defineSchema({
     .index("by_conversation", ["conversationId"])
     .index("by_author", ["userId"])
     .index("by_operation", ["userId", "operationId"])
-    .index("by_pinned", ["conversationId", "pinned"]),
+    .index("by_pinned", ["conversationId", "pinned"])
+    .searchIndex("search_body", { searchField: "body", filterFields: ["conversationId", "kind"] }),
+  attachments: defineTable({
+    userId: v.id("users"),
+    conversationId: v.id("conversations"),
+    storageId: v.id("_storage"),
+    name: v.string(),
+    size: v.number(),
+    messageId: v.optional(v.id("messages")),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_storage", ["storageId"])
+    .index("by_expiry", ["expiresAt"])
+    .index("by_user", ["userId"]),
   hidden: defineTable({ userId: v.id("users"), messageId: v.id("messages") })
     .index("by_message", ["messageId"])
     .index("by_pair", ["userId", "messageId"]),

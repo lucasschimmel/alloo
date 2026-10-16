@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 
-// Storage is exclusively avatars. A one-hour grace period protects in-flight uploads.
+// A one-hour grace period protects in-flight uploads; attached files stay private and retained.
 export const sweep = internalMutation({
   args: { cursor: v.optional(v.string()) },
   handler: async (ctx, { cursor }) => {
@@ -15,10 +15,22 @@ export const sweep = internalMutation({
         .query("profiles")
         .withIndex("by_avatar", (q) => q.eq("avatar", file._id))
         .first();
-      if (!owner) await ctx.storage.delete(file._id);
+      const attachment = await ctx.db
+        .query("attachments")
+        .withIndex("by_storage", (q) => q.eq("storageId", file._id))
+        .first();
+      if (!owner && !attachment) await ctx.storage.delete(file._id);
     }
     if (!page.isDone)
       await ctx.scheduler.runAfter(0, internal.maintenance.sweep, { cursor: page.continueCursor });
+    const drafts = await ctx.db
+      .query("attachments")
+      .withIndex("by_expiry", (q) => q.gt("expiresAt", 0).lte("expiresAt", Date.now()))
+      .take(50);
+    for (const file of drafts) {
+      await ctx.storage.delete(file.storageId);
+      await ctx.db.delete(file._id);
+    }
     const expired = await ctx.db
       .query("presence")
       .withIndex("by_expiry", (q) => q.lt("expiresAt", Date.now()))

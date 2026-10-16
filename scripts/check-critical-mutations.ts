@@ -11,6 +11,31 @@ for (const name of ["convex", "shared", "src"])
   cpSync(join(root, name), join(sandbox, name), { recursive: true });
 writeFileSync(join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
 const cases = [
+  {
+    name: "message author edit bypass",
+    file: "convex/messages.ts",
+    from: 'msg.userId !== own.userId || msg.kind !== "text"',
+    to: 'msg.kind !== "text"',
+  },
+  {
+    name: "attachment owner bypass",
+    file: "convex/messages.ts",
+    from: "file.userId !== own.userId ||",
+    to: "",
+  },
+  {
+    name: "attachment hidden download bypass",
+    file: "convex/attachmentRecords.ts",
+    from: " || hidden)",
+    to: ")",
+  },
+  {
+    name: "search conversation filter bypass",
+    file: "convex/messages.ts",
+    from: '.eq("conversationId", id).eq("kind", "text")',
+    to: '.eq("kind", "text")',
+  },
+
   { name: "PNG preflight bypass", file: "shared/image.ts", from: "validatePng(input);", to: "" },
   {
     name: "call ownership identifiers exposed",
@@ -20,9 +45,9 @@ const cases = [
   },
   {
     name: "reply retry conflict ignored",
-    file: "convex/messages.ts",
-    from: " || old.replyId !== args.replyId",
-    to: "",
+    file: "shared/message-request.ts",
+    from: "replyId ?? null",
+    to: "null",
   },
   {
     name: "group creation cross-member block bypass",

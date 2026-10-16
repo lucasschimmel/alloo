@@ -34,3 +34,7 @@ Local translation must stay local unless the user explicitly requests a disclose
 No product analytics or session replay by default. Error telemetry excludes message text, emails, session values, SDP, private media URLs and push payloads. Use minimized operational identifiers and documented retention. Provide block/report handling, support, export and deletion before public release.
 
 Security review includes dependency advisories, license suitability, secret scanning and authorization-negative tests. A previous clean regex scan is not a comprehensive security audit.
+
+## Message attachments (implemented expansion)
+
+The image decoding contract above remains specific to avatars. Message files use a separate opaque download-only path: authenticated streaming with actual 10 MiB byte cap, extension allowlist, transactional quota and owner/conversation-bound records. No MIME trust, inline rendering, decoder or antivirus claim. The response forces octet-stream attachment, sandbox, nosniff and no-store; membership and visibility are rechecked per download. Detailed lifecycle, quotas and rollback constraints are in [messaging-expansion.md](messaging-expansion.md).

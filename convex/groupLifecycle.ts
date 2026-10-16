@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { publicProfile } from "./access";
+import { deleteAttachment } from "./attachmentRecords";
 
 export async function groupEvent(
   ctx: MutationCtx,
@@ -75,7 +76,10 @@ export const purge = internalMutation({
         .withIndex("by_message", (q) => q.eq("messageId", message._id))
         .take(100);
       for (const row of [...hidden, ...reactions]) await ctx.db.delete(row._id);
-      if (hidden.length < 100 && reactions.length < 100) await ctx.db.delete(message._id);
+      if (hidden.length < 100 && reactions.length < 100) {
+        if (message.attachmentId) await deleteAttachment(ctx, message.attachmentId);
+        await ctx.db.delete(message._id);
+      }
     }
     if (invites.length || messages.length)
       await ctx.scheduler.runAfter(0, internal.groupLifecycle.purge, { id });
