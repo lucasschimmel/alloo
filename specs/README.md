@@ -4,7 +4,7 @@ Prepared 2026-10-15 from the V1 source, technical audit, previous stack research
 
 ## Authority and status
 
-These documents define the product contract. See [implementation status](implementation-status.md) for the implemented features, executed tests and remaining release gates, and [operations](operations.md) for configuration. A test identifier alone does not imply complete acceptance coverage.
+These documents define the product contract. The [latest V2 audit](final-v2-audit.md) records corrected defects and the concrete production checklist. See [implementation status](implementation-status.md) for the implemented features, executed tests and remaining release gates, and [operations](operations.md) for configuration. A test identifier alone does not imply complete acceptance coverage.
 
 User decisions override proposals. A decision marked **selected** is the implementation default; **candidate** requires a prototype; **deferred** is outside the first release. Unresolved product choices are collected in [decisions.md](decisions.md). Change a requirement and its test contract together.
 

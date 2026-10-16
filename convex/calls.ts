@@ -1,4 +1,3 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { LIMITS } from "../shared/policy";
 import { internal } from "./_generated/api";
@@ -44,7 +43,7 @@ export const current = query({
 export const get = query({
   args: { id: v.id("calls") },
   handler: async (ctx, { id }) => {
-    if (!(await getAuthUserId(ctx))) return null;
+    if (!(await readableUser(ctx))) return null;
     const { call, userId } = await owned(ctx, id);
     return {
       ...publicCall(call),
@@ -184,7 +183,7 @@ export const signal = mutation({
 export const signals = query({
   args: { id: v.id("calls"), session: v.string() },
   handler: async (ctx, { id, session }) => {
-    if (!(await getAuthUserId(ctx))) return [];
+    if (!(await readableUser(ctx))) return [];
     const { userId, call } = await owned(ctx, id);
     sessionOwner(call, userId, session);
     return (

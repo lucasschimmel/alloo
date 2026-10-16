@@ -2,7 +2,7 @@
 
 ## Planned acceptance tests
 
-All IDs below are **planned / not executed**. Implement executable tests alongside their feature, then replace this status with test paths and CI evidence. T-FUTURE is a deferred-scope gate, not a passing placeholder.
+The matrix below is the target acceptance contract. Consult [implementation status](implementation-status.md) and the [latest audit](final-v2-audit.md) for executed coverage and outstanding checks; not every criterion is fully certified. T-FUTURE is a deferred-scope gate, not a passing placeholder.
 
 | ID | Required behavior and evidence |
 |---|---|
@@ -47,4 +47,4 @@ Provisional public-page targets: LCP <= 2.5s, INP <= 200ms, CLS <= 0.1 at the 75
 
 CI: frozen install, formatting/lint, generated API consistency, strict types, unit/integration tests, production build, connected E2E and dependency/secret checks. Critical auth/upload/call invariants need negative tests; aggregate coverage cannot substitute for them. Use targeted mutation tests to check that removing a guard fails its tests.
 
-This specification-only branch has no runnable application suite. Document checks validate links, contract coverage and repository reset; they do not certify the future product.
+The branch now contains a runnable application and unit/integration/browser suites. Their passing results do not replace the remaining provider, device, performance and operational release gates.

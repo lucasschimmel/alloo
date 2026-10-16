@@ -12,6 +12,25 @@ for (const name of ["convex", "shared", "src", "public"])
 writeFileSync(join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
 const cases = [
   {
+    name: "pre-onboarding deletion tombstone bypass",
+    file: "convex/accounts.ts",
+    from: "if (!p)",
+    to: "if (false)",
+  },
+  {
+    name: "conversation aggregate read budget bypass",
+    file: "shared/policy.ts",
+    from: "conversationPage: 8",
+    to: "conversationPage: 30",
+  },
+  {
+    name: "scoped local deletion owner bypass",
+    file: "src/features/offline/store.ts",
+    from: "expectedOwner && active?.owner !== expectedOwner",
+    to: "false",
+  },
+
+  {
     name: "outbox account generation bypass",
     file: "src/features/offline/store.ts",
     from: "current?.owner !== owner || current.generation !== generation",

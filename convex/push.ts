@@ -3,12 +3,12 @@ import { ConvexError, v } from "convex/values";
 import { PUSH, validPushSubscription } from "../shared/push";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { actor, blocked, member, readableMember } from "./access";
+import { actor, blocked, member, readableMember, readableUser } from "./access";
 
 export const configuration = query({
   args: {},
   handler: async (ctx) => {
-    await actor(ctx);
+    if (!(await readableUser(ctx))) return null;
     return process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT
       ? (process.env.VAPID_PUBLIC_KEY ?? null)
       : null;

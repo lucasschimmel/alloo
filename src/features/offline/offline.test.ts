@@ -158,3 +158,14 @@ it("T-OFF-LIFETIME transport rejection after cancellation leaves other sends run
   expect(await store.claim("next")).toBeDefined();
   store.close();
 });
+
+it("T-FINAL-LOCAL delayed deletion cleanup cannot clear another account", async () => {
+  const backend = crypto.randomUUID(),
+    store = await openLocalStore(backend, "bob");
+  await store.saveDraft({ id, body: "Bob draft", at: Date.now(), version: "b" });
+  expect(await clearLocalData(backend, "alice")).toBe(false);
+  expect((await store.draft(id))?.body).toBe("Bob draft");
+  expect(await clearLocalData(backend, "bob")).toBe(true);
+  await expect(store.valid()).rejects.toThrow("LOCAL_ACCOUNT_CHANGED");
+  store.close();
+});

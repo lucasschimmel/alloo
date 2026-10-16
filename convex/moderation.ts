@@ -1,7 +1,6 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { actor, publicProfile } from "./access";
+import { actor, publicProfile, readableUser } from "./access";
 
 function isOperator(userId: string) {
   return (process.env.ALLOO_OPERATOR_IDS ?? "")
@@ -12,9 +11,8 @@ function isOperator(userId: string) {
 export const queue = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
+    const userId = await readableUser(ctx);
     if (!userId || !isOperator(userId)) return null;
-    await actor(ctx);
     const rows = await ctx.db
       .query("reports")
       .withIndex("by_status", (q) => q.eq("status", "open"))

@@ -35,6 +35,18 @@ export function AuthGate() {
 }
 function SignedIn() {
   const me = useQuery(api.profiles.me, {});
+  const [cleanupError, setCleanupError] = useState("");
+  const deleted = me?.profile?.deleted,
+    userId = me?.userId;
+  useEffect(() => {
+    if (deleted && userId)
+      void clearBrowserAccount(userId).catch(() =>
+        setCleanupError(
+          "Les données locales n’ont pas pu être effacées. Effacez les données du site sur cet appareil.",
+        ),
+      );
+  }, [deleted, userId]);
+
   if (me === undefined)
     return (
       <main className="center-page" aria-busy="true">
@@ -46,6 +58,7 @@ function SignedIn() {
     return (
       <main className="center-page">
         <h1>Votre compte est supprimé.</h1>
+        {cleanupError && <p role="alert">{cleanupError}</p>}
         <a href="/">Retour à l’accueil</a>
       </main>
     );

@@ -18,7 +18,7 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
   const { results, status, loadMore } = usePaginatedQuery(
     api.conversations.list,
     {},
-    { initialNumItems: 30 },
+    { initialNumItems: LIMITS.conversationPage },
   );
   const search = useSearch({ from: "/app" });
   const navigate = useNavigate({ from: "/app" });
@@ -180,7 +180,11 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
               </div>
             )}
             {status === "CanLoadMore" && (
-              <button type="button" className="load-more" onClick={() => loadMore(30)}>
+              <button
+                type="button"
+                className="load-more"
+                onClick={() => loadMore(LIMITS.conversationPage)}
+              >
                 Voir plus
               </button>
             )}

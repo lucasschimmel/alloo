@@ -31,7 +31,7 @@ This document records the implemented state. Other specification files remain th
 | F23 / T-OFF-* / T-PUSH-* | Persistent drafts/outbox and opt-in generic Web Push; mute, retries, account isolation | Real VAPID delivery and target mobile browser matrix remain external gates; no offline shell/background-send guarantee |
 | F24 | Explicitly deferred | Group calls/native/E2EE/passkeys |
 
-## Executed checks
+## Historical production-audit checks
 
 - Biome recommended rules and formatting: passed with no warnings at the final code gate.
 - Strict TypeScript and production client/server build: passed.
@@ -77,3 +77,7 @@ See [the implementation contract](offline-push-implementation.md). Draft text/re
 Web Push uses an internal Node action, opt-in browser subscriptions and account-generation fencing in a non-caching service worker. Notification text is generic. Subscription/session ownership, per-conversation mute, current message visibility, read state and blocks are rechecked. Browser dedup retains up to 2,000 IDs for one day, scoped to the active binding. Real provider delivery still requires VAPID configuration and device testing.
 
 Current offline/push verification: 107 unit/integration tests, five connected browser scenarios on compiled local Workers (including audio/video regression), 21 selected faults detected. VAPID provider tests use mocks; no live push or remote deployment is claimed.
+
+## Latest V2 audit
+
+See [final-v2-audit.md](final-v2-audit.md) for the current verification evidence and launch checklist. This pass fixes stale queued reply references, pre-onboarding account deletion, aggregate sidebar reads, remote-deletion local data cleanup and mounted reactive queries after deletion. Earlier counts above describe their respective historical checkpoints.

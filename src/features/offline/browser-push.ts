@@ -48,10 +48,22 @@ export async function disableBrowserPush() {
   for (const notification of await registration.getNotifications()) notification.close();
   if (subscription) await subscription.unsubscribe();
 }
-export async function clearBrowserAccount() {
-  window.dispatchEvent(new Event("alloo-local-reset"));
+export async function clearBrowserAccount(expectedOwner?: string) {
+  if (!expectedOwner) window.dispatchEvent(new Event("alloo-local-reset"));
   // Generation is invalidated first. Even a failed/offline unsubscribe cannot expose later notifications.
-  await clearLocalData(import.meta.env.VITE_CONVEX_URL);
+  const cleared = await clearLocalData(import.meta.env.VITE_CONVEX_URL, expectedOwner);
+  if (!cleared) return;
+  if (expectedOwner) {
+    window.dispatchEvent(new CustomEvent("alloo-local-reset", { detail: expectedOwner }));
+    // Remote deletion already revokes server subscriptions. Do not asynchronously unbind a new account.
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      for (const notification of (await registration?.getNotifications()) ?? []) {
+        if (notification.data?.account === expectedOwner) notification.close();
+      }
+    }
+    return;
+  }
   // Local generation revocation already makes incoming push unreadable if the browser is offline.
   await disableBrowserPush().catch(() => false);
 }

@@ -84,6 +84,14 @@ export const remove = mutation({
         avatar: undefined,
       });
     }
+    if (!p)
+      await ctx.db.insert("profiles", {
+        userId,
+        deleted: true,
+        name: "Compte supprimé",
+        username: `deleted_${userId}`,
+        bio: "",
+      });
     const subscriptions = await ctx.db
       .query("pushSubscriptions")
       .withIndex("by_user", (q) => q.eq("userId", userId))

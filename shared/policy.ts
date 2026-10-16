@@ -10,6 +10,7 @@ export const LIMITS = {
   group: 100,
   blocks: 200,
   page: 40,
+  conversationPage: 8,
   avatarBytes: 5 * 1024 * 1024,
   avatarPixels: 1_048_576,
   ringingMs: 30_000,

@@ -27,7 +27,12 @@ export const list = query({
       .query("members")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
-      .paginate(boundedPage(args.paginationOpts, 30));
+      .paginate({
+        ...boundedPage(args.paginationOpts, LIMITS.conversationPage),
+        // Nested history scans can read 100 full messages per membership.
+        // Cap rows even when reactive pagination supplies an expanded endCursor.
+        maximumRowsRead: LIMITS.conversationPage,
+      });
     const rows = await Promise.all(
       page.page.map(async (m) => {
         const c = await ctx.db.get(m.conversationId);

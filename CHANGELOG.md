@@ -2,6 +2,10 @@
 
 ## 2.0.0 — Unreleased
 
+- Fix stale reply sends, pre-onboarding account deletion, aggregate sidebar read limits and reactive queries after deletion.
+- Clear device-local drafts/outbox after remote account deletion without affecting a newly active account.
+- Record final audit evidence and the outstanding production configuration, provider, device and recovery gates.
+
 - Add authenticated message attachments, conversation-scoped indexed search, author edits with revision checks and delete-for-all with file erasure.
 - Keep replies/history reactive, preserve retry identity after edits/deletion and extend storage reconciliation to retained attachments.
 

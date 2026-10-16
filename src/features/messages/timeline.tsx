@@ -56,7 +56,11 @@ export function Timeline({
     [anchorId, setAnchor] = useState<Id<"messages"> | null>(null),
     [person, setPerson] = useState<Message["author"] | null>(null),
     [now, setNow] = useState(Date.now());
-  const reply = useQuery(api.messages.anchor, replyId ? { messageId: replyId } : "skip") ?? null;
+  const reply = useQuery(api.messages.anchor, replyId ? { messageId: replyId } : "skip");
+  useEffect(() => {
+    // Wait for the authoritative result; loading must not erase a valid restored reply.
+    if (replyId && reply !== undefined && (!reply || reply.deletedAt !== undefined)) setReply(null);
+  }, [replyId, reply, setReply]);
   const anchor = useQuery(api.messages.anchor, anchorId ? { messageId: anchorId } : "skip");
   const scroll = useRef<HTMLDivElement>(null),
     following = useRef(true),
@@ -338,7 +342,7 @@ export function Timeline({
         }}
         draft={draft}
         setDraft={setDraft}
-        reply={reply?.deletedAt === undefined ? reply : null}
+        reply={reply?.deletedAt === undefined ? (reply ?? null) : null}
         failed={failed}
         busy={busy || !durable.ready}
         typing={typing}

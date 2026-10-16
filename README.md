@@ -38,7 +38,7 @@ The CLI writes ignored local configuration. Do not copy V1 environment files or 
 - Session-based presence and typing; live system/light/dark themes and responsive layouts.
 - Audio/video calls, microphone/camera toggles, screen-sharing control, server expiration and call history.
 - Blocking, reports, restricted operator queue, profile/message export and account anonymization/access revocation.
-- Public landing, privacy/support pages and install manifest/icons. No offline cache or push notifications.
+- Public landing, privacy/support pages and install manifest/icons. Opt-in Web Push; no offline application cache.
 
 Google/GitHub and email verification/recovery are configured integrations: buttons appear only when configured. Translation uses the browser's on-device Translator capability and clearly reports unsupported browsers. See [implementation status](specs/implementation-status.md) for verified coverage and limitations.
 
@@ -50,7 +50,7 @@ Google/GitHub and email verification/recovery are configured integrations: butto
 | `bun run convex` | Backend watcher using the selected deployment |
 | `bun run verify` | Biome, TypeScript, domain tests and production build |
 | `bun run test:e2e` | Public browser contract; connected scenarios require flags below |
-| `bun scripts/check-critical-mutations.ts` | Seventeen isolated security/lifecycle/translation fault injections |
+| `bun scripts/check-critical-mutations.ts` | Twenty-four selected security/lifecycle fault injections |
 | `bun run build` / `bun run preview` | Compile / locally preview production output |
 | `bun audit` | Dependency vulnerability database check |
 
@@ -77,7 +77,7 @@ Follow [operations](specs/operations.md). Cloudflare Workers is configured and l
 
 The previous code and local settings are preserved outside the repository; see [V1 recovery](specs/rebuild-and-recovery.md).
 
-See [the final production audit](specs/production-audit.md) for confirmed findings, corrections and remaining external launch gates. Blocking is capped at 200 people per account to preserve bounded group admission checks.
+See [the latest V2 audit](specs/final-v2-audit.md) for confirmed findings, corrections and remaining external launch gates. Blocking is capped at 200 people per account to preserve bounded group admission checks.
 
 ### Expanded messaging
 

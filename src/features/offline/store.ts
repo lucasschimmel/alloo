@@ -38,14 +38,21 @@ async function database(backend: string) {
     },
   });
 }
-export async function clearLocalData(backend: string) {
+export async function clearLocalData(backend: string, expectedOwner?: string) {
   const db = await database(backend),
     tx = db.transaction(["meta", "drafts", "outbox"], "readwrite");
+  const active = await tx.objectStore("meta").get("active");
+  if (expectedOwner && active?.owner !== expectedOwner) {
+    await tx.done;
+    db.close();
+    return false;
+  }
   await tx.objectStore("meta").put({ owner: "", generation: crypto.randomUUID() }, "active");
   await tx.objectStore("drafts").clear();
   await tx.objectStore("outbox").clear();
   await tx.done;
   db.close();
+  return true;
 }
 export async function openLocalStore(backend: string, owner: string) {
   const db = await database(backend),

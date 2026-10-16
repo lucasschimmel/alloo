@@ -119,7 +119,10 @@ export function OfflineProvider({
     }
     void tick();
     const timer = setInterval(() => void tick(), OFFLINE.pollMs);
-    const reset = () => controller.abort();
+    const reset = (event: Event) => {
+      if (!(event instanceof CustomEvent) || !event.detail || event.detail === userId)
+        controller.abort();
+    };
     window.addEventListener("alloo-local-reset", reset);
     window.addEventListener("online", tick);
     return () => {
