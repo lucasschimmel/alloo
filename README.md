@@ -108,3 +108,5 @@ Private attachments (one file/message, up to 10 MiB), paginated text search with
 Drafts persist on the current device. The outbox includes attachments, resumes while Alloo is open and connected, and protects retries against duplicates/account changes. Logout clears local drafts and pending sends. See [offline/push](specs/offline-push-implementation.md).
 
 Web Push is opt-in in account settings; each conversation can be muted. Notifications hide contents and sender names. Configure the three VAPID settings in Convex before activation; the release guard checks their presence. Real provider/mobile validation remains required. The worker does not cache private history or provide an offline application shell.
+
+Development targets develop; main receives verified releases through PRs. See [contributing](CONTRIBUTING.md) for branch policy and release evidence.
