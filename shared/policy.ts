@@ -1,4 +1,5 @@
 import type { PaginationOptions } from "convex/server";
+import emojiRegex from "emoji-regex";
 export const LIMITS = {
   message: 4000,
   bio: 160,
@@ -8,6 +9,8 @@ export const LIMITS = {
   avatarBytes: 5 * 1024 * 1024,
   avatarPixels: 1_048_576,
   ringingMs: 30_000,
+  reconnectMs: 15_000,
+  connectMs: 30_000,
   leaseMs: 60_000,
   heartbeatMs: 15_000,
   typingMs: 4000,
@@ -18,6 +21,10 @@ export function boundedPage(options: PaginationOptions, maximum = 100): Paginati
   return { ...options, numItems: Math.max(1, Math.min(maximum, options.numItems)) };
 }
 export const REACTIONS = ["❤️", "👍", "😂", "😮", "😢", "🙏"] as const;
+// Generated Unicode sequences also work on browsers without RegExp's newer v flag.
+export function validReaction(value: string) {
+  return value.length > 0 && value.length <= 32 && emojiRegex().exec(value)?.[0] === value;
+}
 export function canonicalPair(a: string, b: string) {
   if (a === b) throw new Error("SELF_DM");
   return [a, b].sort().join(":");

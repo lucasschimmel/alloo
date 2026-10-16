@@ -1,18 +1,14 @@
 import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { Languages, Pin, Reply, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Copy, Languages, Pin, Reply, Smile, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { explain } from "../../lib/errors";
 export type Message = FunctionReturnType<typeof api.messages.list>["page"][number];
-type TranslatorApi = {
-  availability: (o: { sourceLanguage: string; targetLanguage: string }) => Promise<string>;
-  create: (o: {
-    sourceLanguage: string;
-    targetLanguage: string;
-  }) => Promise<{ translate: (text: string) => Promise<string>; destroy: () => void }>;
-};
+
+import { EmojiPicker } from "./emoji-picker";
+import { translateLocally } from "./translation";
 export function MessageItem({
   message: m,
   userId,
@@ -21,6 +17,8 @@ export function MessageItem({
   onAnchor,
   notify,
   read,
+  grouped = false,
+  onProfile,
 }: {
   message: Message;
   userId: Id<"users">;
@@ -29,39 +27,66 @@ export function MessageItem({
   onAnchor: (id: Id<"messages">) => void;
   notify: (message: string) => void;
   read: boolean;
+  grouped?: boolean;
+  onProfile?: (person: Message["author"]) => void;
 }) {
   const react = useMutation(api.messages.react),
     hide = useMutation(api.messages.hide),
     pin = useMutation(api.messages.pin);
-  const [translation, setTranslation] = useState(""),
-    [translating, setTranslating] = useState(false);
+  const [translation, setTranslation] = useState<Awaited<
+      ReturnType<typeof translateLocally>
+    > | null>(null),
+    [translating, setTranslating] = useState(false),
+    [picker, setPicker] = useState(false);
+  const active = useRef<AbortController | null>(null);
+  useEffect(() => () => active.current?.abort(), []);
   const own = m.userId === userId;
   async function translate() {
-    const Translator = (globalThis as typeof globalThis & { Translator?: TranslatorApi })
-      .Translator;
-    if (!Translator) {
-      notify("La traduction locale n’est pas disponible dans ce navigateur.");
+    if (translating) return;
+    if (translation) {
+      setTranslation(null);
       return;
     }
+    const controller = new AbortController();
+    active.current = controller;
     setTranslating(true);
-    let instance: Awaited<ReturnType<TranslatorApi["create"]>> | undefined;
     try {
-      const options = { sourceLanguage: "en", targetLanguage: "fr" };
-      if ((await Translator.availability(options)) === "unavailable")
-        throw new Error("Unavailable");
-      instance = await Translator.create(options);
-      setTranslation(await instance.translate(m.body));
-    } catch {
-      notify("La traduction anglais → français n’est pas disponible pour ce message.");
+      setTranslation(await translateLocally(m.body, navigator.language, controller.signal));
+    } catch (error) {
+      if (!controller.signal.aborted) notify(explain(error));
     } finally {
-      instance?.destroy();
-      setTranslating(false);
+      if (!controller.signal.aborted) setTranslating(false);
     }
   }
-  if (m.kind !== "text") return <div className="system-message">{m.body}</div>;
+  if (m.kind !== "text")
+    return (
+      <div className="system-message">
+        {m.kind === "call" && `${own ? "Vous" : m.author.name} · `}
+        {m.body}
+        {m.kind === "call" && (
+          <time>
+            {" "}
+            ·{" "}
+            {new Date(m._creationTime).toLocaleTimeString("fr", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
+        )}
+      </div>
+    );
   return (
     <article className={`message-row ${own ? "own" : ""}`} data-message={m._id}>
-      <span className="message-author">{own ? "Vous" : m.author.name}</span>
+      {!grouped && (
+        <button
+          type="button"
+          className="message-author profile-link"
+          aria-label={`Profil de ${m.author.name}`}
+          onClick={() => onProfile?.(m.author)}
+        >
+          {own ? "Vous" : m.author.name}
+        </button>
+      )}
       <div className={`bubble ${own ? "outgoing" : "incoming"}`}>
         {m.quote && (
           <button type="button" className="quote" onClick={() => onAnchor(m.quote?.id ?? m._id)}>
@@ -72,8 +97,10 @@ export function MessageItem({
         {translation && (
           <div className="translation">
             <hr />
-            {translation}
-            <small>Traduction locale · anglais → français</small>
+            {translation.text}
+            <small>
+              Traduction locale · {translation.sourceLanguage} → {translation.targetLanguage}
+            </small>
           </div>
         )}
         <small>
@@ -85,6 +112,13 @@ export function MessageItem({
           {own && (read ? " · Lu" : " · Envoyé")}
         </small>
       </div>
+      <EmojiPicker
+        open={picker}
+        onClose={() => setPicker(false)}
+        onSelect={(emoji) =>
+          void react({ messageId: m._id, emoji }).catch((e) => notify(explain(e)))
+        }
+      />
       <div className="message-actions">
         {m.reactions.map((r) => (
           <button
@@ -117,6 +151,21 @@ export function MessageItem({
         >
           <Reply size={13} />
         </button>
+        <button type="button" aria-label="Choisir une réaction" onClick={() => setPicker(true)}>
+          <Smile size={13} />
+        </button>
+        <button
+          type="button"
+          aria-label="Copier le message"
+          onClick={() =>
+            void navigator.clipboard
+              .writeText(m.body)
+              .then(() => notify("Message copié."))
+              .catch(() => notify("La copie n’est pas autorisée dans ce navigateur."))
+          }
+        >
+          <Copy size={13} />
+        </button>
         {canPin && (
           <button
             type="button"
@@ -138,8 +187,8 @@ export function MessageItem({
         <button
           type="button"
           disabled={translating}
-          title="Traduire de l’anglais vers le français sur cet appareil"
-          aria-label="Traduire en français"
+          title="Traduire sur cet appareil"
+          aria-label={translation ? "Masquer la traduction" : "Traduire le message"}
           onClick={() => void translate()}
         >
           <Languages size={13} />

@@ -1,10 +1,11 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
-import { boundedPage, cleanText, LIMITS, REACTIONS } from "../shared/policy";
+import { messageLabel } from "../shared/message-label";
+import { boundedPage, cleanText, LIMITS, validReaction } from "../shared/policy";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
-import { blocked, member, publicProfile, quota } from "./access";
+import { blocked, member, publicProfile, quota, readableMember } from "./access";
 
 async function hidden(ctx: QueryCtx, userId: Id<"users">, id: Id<"messages">) {
   return !!(await ctx.db
@@ -16,7 +17,7 @@ async function decorate(ctx: QueryCtx, userId: Id<"users">, msg: Doc<"messages">
   const reply = msg.replyId ? await ctx.db.get(msg.replyId) : null;
   const quote =
     reply && reply.conversationId === msg.conversationId && !(await hidden(ctx, userId, reply._id))
-      ? { id: reply._id, body: reply.body }
+      ? { id: reply._id, body: messageLabel(reply) }
       : null;
   const reactions = await ctx.db
     .query("reactions")
@@ -24,25 +25,29 @@ async function decorate(ctx: QueryCtx, userId: Id<"users">, msg: Doc<"messages">
     .take(100);
   return {
     ...msg,
+    body: messageLabel(msg),
     author: await publicProfile(ctx, msg.userId),
     quote,
-    reactions: REACTIONS.map((emoji) => ({
-      emoji,
-      count: reactions.filter((r) => r.emoji === emoji).length,
-      mine: reactions.some((r) => r.emoji === emoji && r.userId === userId),
-    })).filter((r) => r.count),
+    reactions: [...new Set(reactions.map((r) => r.emoji))]
+      .map((emoji) => ({
+        emoji,
+        count: reactions.filter((r) => r.emoji === emoji).length,
+        mine: reactions.some((r) => r.emoji === emoji && r.userId === userId),
+      }))
+      .filter((r) => r.count),
   };
 }
 export const list = query({
   args: { id: v.id("conversations"), paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     if (!(await getAuthUserId(ctx))) return { page: [], isDone: true, continueCursor: "" };
-    const own = await member(ctx, args.id),
-      page = await ctx.db
-        .query("messages")
-        .withIndex("by_conversation", (q) => q.eq("conversationId", args.id))
-        .order("desc")
-        .paginate(boundedPage(args.paginationOpts));
+    const own = await readableMember(ctx, args.id);
+    if (!own) return { page: [], isDone: true, continueCursor: "" };
+    const page = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.id))
+      .order("desc")
+      .paginate(boundedPage(args.paginationOpts));
     const rows = [];
     for (const msg of page.page)
       if (!(await hidden(ctx, own.userId, msg._id)))
@@ -64,14 +69,16 @@ export const pins = query({
   args: { id: v.id("conversations") },
   handler: async (ctx, { id }) => {
     if (!(await getAuthUserId(ctx))) return [];
-    const own = await member(ctx, id);
+    const own = await readableMember(ctx, id);
+    if (!own) return [];
     // Pin count is capped at 10; index added below keeps history-independent work.
     const rows = await ctx.db
       .query("messages")
       .withIndex("by_pinned", (q) => q.eq("conversationId", id).eq("pinned", true))
       .take(10);
     const result = [];
-    for (const m of rows) if (!(await hidden(ctx, own.userId, m._id))) result.push(m);
+    for (const m of rows)
+      if (!(await hidden(ctx, own.userId, m._id))) result.push({ ...m, body: messageLabel(m) });
     return result;
   },
 });
@@ -149,7 +156,7 @@ export const hide = mutation({
 export const react = mutation({
   args: { messageId: v.id("messages"), emoji: v.string() },
   handler: async (ctx, { messageId, emoji }) => {
-    if (!REACTIONS.some((e) => e === emoji)) throw new ConvexError("INVALID_REACTION");
+    if (!validReaction(emoji)) throw new ConvexError("INVALID_REACTION");
     const msg = await ctx.db.get(messageId);
     if (!msg) throw new ConvexError("NOT_FOUND");
     const own = await member(ctx, msg.conversationId);

@@ -12,6 +12,7 @@ export default defineSchema({
     username: v.string(),
     name: v.string(),
     bio: v.string(),
+    lastSeenAt: v.optional(v.number()),
     avatar: v.optional(v.id("_storage")),
     deleted: v.optional(v.boolean()),
   })
@@ -23,6 +24,7 @@ export default defineSchema({
     title: v.string(),
     pair: v.optional(v.string()),
     updatedAt: v.number(),
+    closed: v.optional(v.boolean()),
   }).index("by_pair", ["pair"]),
   members: defineTable({
     conversationId: v.id("conversations"),
@@ -41,16 +43,46 @@ export default defineSchema({
     operationId: v.string(),
     replyId: v.optional(v.id("messages")),
     kind: v.union(v.literal("text"), v.literal("system"), v.literal("call")),
+    event: v.optional(
+      v.object({
+        action: v.union(
+          v.literal("created"),
+          v.literal("renamed"),
+          v.literal("added"),
+          v.literal("joined"),
+          v.literal("left"),
+          v.literal("removed"),
+          v.literal("promoted"),
+          v.literal("demoted"),
+        ),
+        actorName: v.string(),
+        targetName: v.optional(v.string()),
+        title: v.optional(v.string()),
+      }),
+    ),
+    callData: v.optional(
+      v.object({
+        callId: v.id("calls"),
+        kind: v.union(v.literal("audio"), v.literal("video")),
+        outcome: v.union(
+          v.literal("completed"),
+          v.literal("missed"),
+          v.literal("declined"),
+          v.literal("canceled"),
+          v.literal("interrupted"),
+        ),
+        durationSeconds: v.number(),
+      }),
+    ),
     pinned: v.boolean(),
   })
     .index("by_conversation", ["conversationId"])
     .index("by_author", ["userId"])
     .index("by_operation", ["userId", "operationId"])
     .index("by_pinned", ["conversationId", "pinned"]),
-  hidden: defineTable({ userId: v.id("users"), messageId: v.id("messages") }).index("by_pair", [
-    "userId",
-    "messageId",
-  ]),
+  hidden: defineTable({ userId: v.id("users"), messageId: v.id("messages") })
+    .index("by_message", ["messageId"])
+    .index("by_pair", ["userId", "messageId"]),
   reactions: defineTable({ messageId: v.id("messages"), userId: v.id("users"), emoji: v.string() })
     .index("by_message", ["messageId"])
     .index("by_pair", ["messageId", "userId"]),
@@ -99,6 +131,7 @@ export default defineSchema({
     callerHeartbeat: v.number(),
     recipientHeartbeat: v.number(),
     acceptedSession: v.optional(v.string()),
+    startedAt: v.optional(v.number()),
     reason: v.optional(v.string()),
   })
     .index("by_caller", ["callerId", "state"])

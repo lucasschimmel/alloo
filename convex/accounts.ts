@@ -5,6 +5,7 @@ import { boundedPage, cleanText, LIMITS } from "../shared/policy";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { actor, quota } from "./access";
+import { closeEmptyGroup, groupEvent } from "./groupLifecycle";
 export const block = mutation({
   args: { targetId: v.id("users"), blocked: v.boolean() },
   handler: async (ctx, { targetId, blocked }) => {
@@ -83,16 +84,21 @@ export const cleanup = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .take(10);
     for (const own of memberships) {
+      const isGroup = (await ctx.db.get(own.conversationId))?.kind === "group";
       if (own.role === "admin") {
         const others = await ctx.db
           .query("members")
           .withIndex("by_conversation", (q) => q.eq("conversationId", own.conversationId))
           .take(LIMITS.group);
         const next = others.find((x) => x.userId !== userId);
-        if (next && !others.some((x) => x.userId !== userId && x.role === "admin"))
+        if (next && !others.some((x) => x.userId !== userId && x.role === "admin")) {
           await ctx.db.patch(next._id, { role: "admin" });
+          if (isGroup) await groupEvent(ctx, own.conversationId, userId, "promoted", next.userId);
+        }
       }
       await ctx.db.delete(own._id);
+      if (isGroup) await groupEvent(ctx, own.conversationId, userId, "left");
+      await closeEmptyGroup(ctx, own.conversationId);
     }
     if (memberships.length) {
       await ctx.scheduler.runAfter(0, internal.accounts.cleanup, { userId });

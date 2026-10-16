@@ -21,14 +21,21 @@ export function ConversationInfo({
     rename = useMutation(api.conversations.rename),
     membership = useMutation(api.conversations.membership),
     invite = useMutation(api.conversations.createInvite),
+    revoke = useMutation(api.conversations.revokeInvite),
+    addMembers = useMutation(api.conversations.addMembers),
     block = useMutation(api.accounts.block),
     report = useMutation(api.accounts.report);
   const peer = detail?.kind === "dm" ? detail.members.find((m) => m.userId !== userId) : undefined;
   const isBlocked = useQuery(api.accounts.isBlocked, peer ? { targetId: peer.userId } : "skip");
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [link, setLink] = useState(""),
+    [term, setTerm] = useState(""),
     [reason, setReason] = useState("");
+  const people = useQuery(
+    api.profiles.search,
+    detail?.role === "admin" && term.length >= 2 ? { term } : "skip",
+  );
+  const link = detail?.invite ? `${location.origin}/invite/${detail.invite.code}` : "";
   async function act(fn: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -52,6 +59,32 @@ export function ConversationInfo({
       <div className="stack">
         {detail?.kind === "group" && detail.role === "admin" && (
           <>
+            <label>
+              Ajouter des membres
+              <input
+                aria-label="Rechercher un membre à ajouter"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Nom d’utilisateur…"
+              />
+            </label>
+            {people
+              ?.filter((p) => !detail.members.some((m) => m.userId === p.userId))
+              .map((p) => (
+                <button
+                  key={p.userId}
+                  type="button"
+                  disabled={busy || detail.members.length >= 100}
+                  onClick={() =>
+                    void act(async () => {
+                      await addMembers({ id, userIds: [p.userId] });
+                      setTerm("");
+                    })
+                  }
+                >
+                  Ajouter {p.name} (@{p.username})
+                </button>
+              ))}
             <form
               className="stack"
               onSubmit={(e) => {
@@ -76,7 +109,6 @@ export function ConversationInfo({
                   const bytes = crypto.getRandomValues(new Uint8Array(16));
                   const code = Array.from(bytes, (x) => x.toString(16).padStart(2, "0")).join("");
                   await invite({ id, code });
-                  setLink(`${location.origin}/invite/${code}`);
                 })
               }
             >
@@ -91,7 +123,23 @@ export function ConversationInfo({
                   onFocus={(e) => e.currentTarget.select()}
                 />
                 <QRCodeSVG value={link} size={160} />
-                <p className="small muted">Valable 7 jours. Les anciens liens sont révoqués.</p>
+                <button
+                  type="button"
+                  onClick={() => void act(() => navigator.clipboard.writeText(link))}
+                >
+                  Copier le lien
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void act(() => revoke({ id }))}
+                >
+                  Révoquer le lien
+                </button>
+                <p className="small muted">
+                  Expire le {new Date(detail.invite?.expiresAt ?? 0).toLocaleDateString("fr")}.
+                  Renouveler invalide le lien précédent.
+                </p>
               </div>
             )}
           </>

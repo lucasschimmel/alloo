@@ -1,3 +1,4 @@
+import { LIMITS } from "../../../shared/policy";
 import { MediaLease } from "./media-lease";
 export class Peer {
   readonly pc: RTCPeerConnection;
@@ -13,6 +14,9 @@ export class Peer {
   private screenPending = false;
   private candidates: RTCIceCandidateInit[] = [];
   private queue = Promise.resolve();
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectionFailed = false;
+  private prepared: Promise<void> | null = null;
   constructor(
     private config: {
       iceServers: RTCIceServer[];
@@ -21,6 +25,7 @@ export class Peer {
       changed: () => void;
       remote: (stream: MediaStream) => void;
       connected: () => void;
+      disconnected: () => void;
       failed: (error: unknown) => void;
     },
   ) {
@@ -35,14 +40,17 @@ export class Peer {
       this.queue = this.queue
         .then(async () => {
           if (this.closed) return;
+          let sent: Promise<unknown> | undefined;
           try {
             this.makingOffer = true;
             await this.pc.setLocalDescription();
             if (!this.closed)
-              await config.signal(JSON.stringify({ description: this.pc.localDescription }));
+              sent = config.signal(JSON.stringify({ description: this.pc.localDescription }));
           } finally {
             this.makingOffer = false;
           }
+          // Transport acknowledgement must not hold the SDP collision lock.
+          await sent;
         })
         .catch(config.failed);
     };
@@ -53,11 +61,35 @@ export class Peer {
       e.track.onended = () => config.changed();
     };
     this.pc.onconnectionstatechange = () => {
-      if (this.pc.connectionState === "connected") config.connected();
-      if (this.pc.connectionState === "failed") config.failed(new Error("CALL_CONNECTION_FAILED"));
+      if (this.closed || this.connectionFailed) return;
+      if (this.pc.connectionState === "connected") {
+        this.clearReconnect();
+        config.connected();
+      }
+      if (this.pc.connectionState === "disconnected" && !this.reconnectTimer) {
+        config.disconnected();
+        this.reconnectTimer = setTimeout(() => this.failConnection(), LIMITS.reconnectMs);
+        // Only the offerer initiates an ICE restart; perfect negotiation handles collisions.
+        if (!config.polite) this.pc.restartIce();
+      }
+      if (this.pc.connectionState === "failed") this.failConnection();
     };
   }
-  async prepare(video: boolean) {
+  private clearReconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+  }
+  private failConnection() {
+    if (this.closed || this.connectionFailed) return;
+    this.connectionFailed = true;
+    this.clearReconnect();
+    this.config.failed(new Error("CALL_CONNECTION_FAILED"));
+  }
+  prepare(video: boolean) {
+    this.prepared ??= this.acquireMedia(video);
+    return this.prepared;
+  }
+  private async acquireMedia(video: boolean) {
     this.local = await this.lease.acquire(
       navigator.mediaDevices.getUserMedia({ audio: true, video }),
     );
@@ -74,8 +106,12 @@ export class Peer {
   async receive(body: string) {
     const data: { description?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit } =
       JSON.parse(body);
+    // Do not answer without our tracks while microphone permission is pending.
+    await this.prepared;
     if (this.closed) return;
     if (data.description) {
+      if (!this.reconnectTimer && this.pc.connectionState !== "connected")
+        this.reconnectTimer = setTimeout(() => this.failConnection(), LIMITS.connectMs);
       const collision =
         data.description.type === "offer" &&
         (this.makingOffer || this.pc.signalingState !== "stable");
@@ -142,6 +178,8 @@ export class Peer {
   close() {
     if (this.closed) return;
     this.closed = true;
+    this.clearReconnect();
+    this.pc.onconnectionstatechange = null;
     this.pc.onnegotiationneeded = null;
     this.pc.onicecandidate = null;
     this.pc.ontrack = null;

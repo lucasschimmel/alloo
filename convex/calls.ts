@@ -4,7 +4,7 @@ import { LIMITS } from "../shared/policy";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type QueryCtx, query } from "./_generated/server";
-import { actor, blocked, member, quota } from "./access";
+import { actor, blocked, member, publicProfile, quota } from "./access";
 import { endCall } from "./callLifecycle";
 
 async function liveFor(ctx: QueryCtx, userId: Id<"users">) {
@@ -40,14 +40,27 @@ export const current = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
-    return (await liveFor(ctx, userId)).find((c) => c.expiresAt > Date.now()) ?? null;
+    const call = (await liveFor(ctx, userId)).find((c) => c.expiresAt > Date.now());
+    return call
+      ? {
+          ...call,
+          peer: await publicProfile(
+            ctx,
+            call.callerId === userId ? call.recipientId : call.callerId,
+          ),
+        }
+      : null;
   },
 });
 export const get = query({
   args: { id: v.id("calls") },
   handler: async (ctx, { id }) => {
     if (!(await getAuthUserId(ctx))) return null;
-    return (await owned(ctx, id)).call;
+    const { call, userId } = await owned(ctx, id);
+    return {
+      ...call,
+      peer: await publicProfile(ctx, call.callerId === userId ? call.recipientId : call.callerId),
+    };
   },
 });
 export const start = mutation({
@@ -104,6 +117,7 @@ export const accept = mutation({
     const now = Date.now();
     await ctx.db.patch(id, {
       state: "active",
+      startedAt: now,
       acceptedSession: session,
       callerHeartbeat: now,
       recipientHeartbeat: now,
@@ -112,11 +126,23 @@ export const accept = mutation({
   },
 });
 export const hangup = mutation({
-  args: { id: v.id("calls"), session: v.optional(v.string()) },
-  handler: async (ctx, { id, session }) => {
+  args: {
+    id: v.id("calls"),
+    session: v.optional(v.string()),
+    reason: v.optional(v.literal("connection-failed")),
+  },
+  handler: async (ctx, { id, session, reason }) => {
     const { userId, call } = await owned(ctx, id);
     if (call.state === "active") sessionOwner(call, userId, session);
-    await endCall(ctx, call, call.state === "ringing" ? "declined" : "hangup");
+    await endCall(
+      ctx,
+      call,
+      call.state === "ringing"
+        ? userId === call.callerId
+          ? "canceled"
+          : "declined"
+        : (reason ?? "hangup"),
+    );
   },
 });
 export const heartbeat = mutation({

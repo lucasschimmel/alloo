@@ -12,6 +12,36 @@ for (const name of ["convex", "shared", "src"])
 writeFileSync(join(sandbox, "package.json"), JSON.stringify({ type: "module" }));
 const cases = [
   {
+    name: "SDP collision lock held until transport acknowledgement",
+    file: "src/features/calls/peer.ts",
+    from: "this.makingOffer = false;\n          }",
+    to: "await sent; this.makingOffer = false;\n          }",
+  },
+  {
+    name: "empty group cleanup disabled",
+    file: "convex/groupLifecycle.ts",
+    from: "await ctx.scheduler.runAfter(0, internal.groupLifecycle.purge, { id });",
+    to: "",
+  },
+  {
+    name: "deleted last member can invite before cleanup",
+    file: "convex/conversations.ts",
+    from: "!liveProfiles.some((p) => p && !p.deleted)",
+    to: "false",
+  },
+  {
+    name: "disconnected media ignored",
+    file: "src/features/calls/peer.ts",
+    from: 'this.pc.connectionState === "disconnected"',
+    to: "false",
+  },
+  {
+    name: "translation direction hardcoded",
+    file: "src/features/messages/translation.ts",
+    from: "const sourceLanguage = detected.detectedLanguage;",
+    to: 'const sourceLanguage = "en";',
+  },
+  {
     name: "block policy bypass",
     file: "convex/access.ts",
     from: "return rows.some(Boolean);",
@@ -71,7 +101,7 @@ for (const item of cases) {
 writeFileSync(
   join(root, ".claude/crafts/alloo-v2/mutation-results.json"),
   JSON.stringify(
-    { baseline: "passed", scope: "four hand-selected critical fault injections", results },
+    { baseline: "passed", scope: "hand-selected critical fault injections", results },
     null,
     2,
   ),

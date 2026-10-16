@@ -3,14 +3,14 @@ import { useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 export function Avatar({ name, userId }: { name: string; userId?: Id<"users"> }) {
-  const id = useQuery(api.profiles.avatar, userId ? { userId } : "skip"),
+  const source = useQuery(api.profiles.avatar, userId ? { userId } : "skip"),
     read = useAction(api.avatars.read);
   const [url, setUrl] = useState<string>();
   useEffect(() => {
     let canceled = false;
     let objectUrl: string | undefined;
-    setUrl(undefined);
-    if (id && userId)
+    setUrl(source?.providerUrl ?? undefined);
+    if (source?.storageId && userId)
       void read({ userId })
         .then((bytes) => {
           if (bytes && !canceled) {
@@ -25,10 +25,14 @@ export function Avatar({ name, userId }: { name: string; userId?: Id<"users"> })
       canceled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [id, userId, read]);
+  }, [source?.storageId, source?.providerUrl, userId, read]);
   return (
     <span className="avatar" aria-hidden="true">
-      {url ? <img src={url} alt="" /> : name.trim().slice(0, 2).toUpperCase()}
+      {url ? (
+        <img src={url} alt="" referrerPolicy="no-referrer" onError={() => setUrl(undefined)} />
+      ) : (
+        name.trim().slice(0, 2).toUpperCase()
+      )}
     </span>
   );
 }

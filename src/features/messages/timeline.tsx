@@ -1,19 +1,20 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useConvex, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowDown, ArrowLeft, MoreHorizontal, Phone, Send, Video, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, MoreHorizontal, Phone, Video } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { dateLabel, lastSeenLabel, sameDay } from "../../../shared/message-label";
 import { LIMITS } from "../../../shared/policy";
 import { Avatar } from "../../components/ui/avatar";
 import { Modal } from "../../components/ui/modal";
 import { explain } from "../../lib/errors";
 import { useCalls } from "../calls/call-provider";
+import { MessageComposer, type Pending } from "./message-composer";
 import { type Message, MessageItem } from "./message-item";
 
 type Details = NonNullable<FunctionReturnType<typeof api.conversations.details>>;
-type Pending = { body: string; operationId: string; replyId?: Id<"messages"> };
 export function Timeline({
   detail,
   userId,
@@ -48,6 +49,7 @@ export function Timeline({
     [busy, setBusy] = useState(false),
     [atBottom, setAtBottom] = useState(true),
     [anchor, setAnchor] = useState<Message | null>(null),
+    [person, setPerson] = useState<Message["author"] | null>(null),
     [now, setNow] = useState(Date.now());
   const scroll = useRef<HTMLDivElement>(null),
     following = useRef(true),
@@ -160,7 +162,7 @@ export function Timeline({
               ? `${detail.members.length} membres`
               : online
                 ? "En ligne"
-                : "Votre conversation privée"}
+                : lastSeenLabel(presence?.find((p) => p.userId === peer?.userId)?.lastSeenAt)}
           </p>
         </div>
         <div className="header-actions">
@@ -257,13 +259,29 @@ export function Timeline({
                   transform: `translateY(${row.start}px)`,
                 }}
               >
+                {(!messages[row.index - 1] ||
+                  !sameDay(messages[row.index - 1]._creationTime, m._creationTime)) && (
+                  <div className="date-separator">
+                    <time dateTime={new Date(m._creationTime).toISOString()}>
+                      {dateLabel(m._creationTime)}
+                    </time>
+                  </div>
+                )}
                 <MessageItem
+                  grouped={
+                    m.kind === "text" &&
+                    messages[row.index - 1]?.kind === "text" &&
+                    messages[row.index - 1]?.userId === m.userId &&
+                    sameDay(messages[row.index - 1]._creationTime, m._creationTime) &&
+                    m._creationTime - messages[row.index - 1]._creationTime < 300_000
+                  }
                   message={m}
                   userId={userId}
                   canPin={detail.kind === "dm" || detail.role === "admin"}
                   onReply={setReply}
                   onAnchor={(messageId) => void jump(messageId)}
                   notify={notify}
+                  onProfile={setPerson}
                   read={detail.members.some(
                     (p) => p.userId !== userId && p.readAt >= m._creationTime,
                   )}
@@ -288,75 +306,47 @@ export function Timeline({
           </button>
         </div>
       )}
-      <div className="composer-area">
-        {reply && (
-          <div className="context-strip">
-            <span>
-              Réponse à {reply.author.name} : {reply.body.slice(0, 80)}
-            </span>
-            <button type="button" aria-label="Annuler la réponse" onClick={() => setReply(null)}>
-              <X size={14} />
-            </button>
+      <MessageComposer
+        draft={draft}
+        setDraft={setDraft}
+        reply={reply}
+        failed={failed}
+        busy={busy}
+        typing={typing}
+        typingLabel={
+          typingPeople.length
+            ? `${typingPeople.map((p) => detail.members.find((m) => m.userId === p.userId)?.name ?? "Quelqu’un").join(", ")} écrit…`
+            : ""
+        }
+        kind={detail.kind}
+        title={title}
+        onSubmit={submit}
+        onCancelReply={() => setReply(null)}
+        onRemoveFailed={(operationId) =>
+          setFailed((rows) => rows.filter((x) => x.operationId !== operationId))
+        }
+      />
+      <Modal
+        open={!!person}
+        onClose={() => setPerson(null)}
+        title={`Profil de ${person?.name ?? ""}`}
+        description={person?.username ? `@${person.username}` : ""}
+      >
+        {person && (
+          <div className="stack">
+            <Avatar name={person.name} userId={person.userId} />
+            <p>{person.bio || "Cette personne n’a pas encore ajouté de présentation."}</p>
+            {detail.members.find((m) => m.userId === person.userId)?.role === "admin" && (
+              <strong>Administrateur</strong>
+            )}
+            <p>
+              {presence?.some((p) => p.userId === person.userId && p.expiresAt > now)
+                ? "En ligne"
+                : lastSeenLabel(presence?.find((p) => p.userId === person.userId)?.lastSeenAt)}
+            </p>
           </div>
         )}
-        {failed.map((item) => (
-          <div className="failed-send" key={item.operationId}>
-            <span>Non envoyé : {item.body.slice(0, 50)}</span>
-            <button type="button" disabled={busy} onClick={() => void submit(item)}>
-              Réessayer
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setFailed((rows) => rows.filter((x) => x.operationId !== item.operationId))
-              }
-            >
-              Retirer
-            </button>
-          </div>
-        ))}
-        <div className="typing-label" aria-live="polite">
-          {typingPeople.length
-            ? `${typingPeople.map((p) => detail.members.find((m) => m.userId === p.userId)?.name ?? "Quelqu’un").join(", ")} écrit…`
-            : ""}
-        </div>
-        <form
-          className="composer"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          <textarea
-            aria-label="Votre message"
-            placeholder={`Écrire ${detail.kind === "group" ? "dans le groupe" : `à ${title}`}…`}
-            rows={1}
-            maxLength={LIMITS.message}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              typing(!!e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                void submit();
-              }
-            }}
-          />
-          <button
-            className="primary"
-            disabled={!draft.trim() || busy}
-            type="submit"
-            aria-label="Envoyer le message"
-          >
-            <Send size={19} />
-          </button>
-        </form>
-        <div className="composer-hint">
-          Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne
-        </div>
-      </div>
+      </Modal>
       <Modal
         open={!!anchor}
         onClose={() => setAnchor(null)}
@@ -374,6 +364,7 @@ export function Timeline({
             }}
             onAnchor={(messageId) => void jump(messageId)}
             notify={notify}
+            onProfile={setPerson}
             read={false}
           />
         )}

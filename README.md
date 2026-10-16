@@ -33,9 +33,9 @@ The CLI writes ignored local configuration. Do not copy V1 environment files or 
 ## Available
 
 - Email/password account, onboarding, profile editing and validated avatar replacement.
-- User discovery, private conversations, groups, membership roles and invitation links/QR codes.
+- User discovery, private conversations, groups, direct member addition, membership events and reusable invitation links/QR codes.
 - Reactive messages, paginated virtual history, replies, pins, reactions, hide-for-me and read receipts.
-- Session-based presence and typing; light/dark themes and responsive layouts.
+- Session-based presence and typing; live system/light/dark themes and responsive layouts.
 - Audio/video calls, microphone/camera toggles, screen-sharing control, server expiration and call history.
 - Blocking, reports, restricted operator queue, profile/message export and account anonymization/access revocation.
 - Public landing, privacy/support pages and install manifest/icons. No offline cache or push notifications.
@@ -50,7 +50,7 @@ Google/GitHub and email verification/recovery are configured integrations: butto
 | `bun run convex` | Backend watcher using the selected deployment |
 | `bun run verify` | Biome, TypeScript, domain tests and production build |
 | `bun run test:e2e` | Public browser contract; connected scenarios require flags below |
-| `bun scripts/check-critical-mutations.ts` | Four isolated security/call fault injections |
+| `bun scripts/check-critical-mutations.ts` | Nine isolated security/lifecycle/translation fault injections |
 | `bun run build` / `bun run preview` | Compile / locally preview production output |
 | `bun audit` | Dependency vulnerability database check |
 
@@ -63,7 +63,7 @@ $env:E2E_MEDIA = '1'
 bun run test:e2e
 ```
 
-For the compiled frontend, start `bun run preview --port 4173` and set `E2E_BASE_URL=http://127.0.0.1:4173`. Chromium uses synthetic camera/microphone devices while real WebRTC transports media between independent browser contexts. This does not certify physical devices or cross-network TURN.
+Restart the preview process after each rebuild to reload its SSR asset manifest. For the compiled frontend, start `bun run preview --port 4173` and set `E2E_BASE_URL=http://127.0.0.1:4173`. Chromium uses synthetic camera/microphone devices while real WebRTC transports media between independent browser contexts. This does not certify physical devices or cross-network TURN.
 
 ## Structure
 

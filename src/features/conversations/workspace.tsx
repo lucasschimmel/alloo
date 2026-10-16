@@ -1,5 +1,6 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useConvexConnectionState, useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { MessageCircle, Moon, Plus, Search, Settings, Sun } from "lucide-react";
+import { MessageCircle, Plus, Search, Settings } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -19,13 +20,21 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
     {},
     { initialNumItems: 30 },
   );
-  const [selected, setSelected] = useState<Id<"conversations"> | null>(null),
-    [creating, setCreating] = useState(false),
+  const search = useSearch({ from: "/app" });
+  const navigate = useNavigate({ from: "/app" });
+  const selected = search.conversation ?? null;
+  const setSelected = useCallback(
+    (id: Id<"conversations"> | null) => {
+      void navigate({ search: { conversation: id ?? undefined } });
+    },
+    [navigate],
+  );
+  const [creating, setCreating] = useState(false),
     [settings, setSettings] = useState(false),
     [info, setInfo] = useState(false),
     [term, setTerm] = useState(""),
     [toast, setToast] = useState(""),
-    [dark, setDark] = useState(false);
+    [theme, setTheme] = useState(() => localStorage.getItem("alloo-theme") ?? "system");
   const detail = useQuery(api.conversations.details, selected ? { id: selected } : "skip"),
     heartbeat = useMutation(api.presence.heartbeat),
     join = useMutation(api.conversations.join),
@@ -34,31 +43,42 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
     lastTyping = useRef(0);
   const notify = useCallback((text: string) => setToast(text), []);
   useEffect(() => {
+    if (selected && detail === null) {
+      setInfo(false);
+      notify("Cette conversation n’est plus accessible. Vous avez peut-être été retiré du groupe.");
+      void navigate({ search: {}, replace: true });
+    }
+  }, [detail, selected, navigate, notify]);
+  useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 6000);
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    const saved = localStorage.getItem("alloo-theme"),
-      isDark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-    setDark(isDark);
-    document.documentElement.dataset.theme = isDark ? "dark" : "light";
-  }, []);
+    const system = matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      document.documentElement.dataset.theme =
+        theme === "system" ? (system.matches ? "dark" : "light") : theme;
+    };
+    apply();
+    localStorage.setItem("alloo-theme", theme);
+    system.addEventListener("change", apply);
+    return () => system.removeEventListener("change", apply);
+  }, [theme]);
   useEffect(() => {
-    const code = new URLSearchParams(location.search).get("invite");
+    const code = search.invite;
     if (!code) return;
     void join({ code })
       .then((id) => {
-        setSelected(id);
-        history.replaceState(null, "", "/app");
+        void navigate({ search: { conversation: id }, replace: true });
       })
       .catch((e) => notify(explain(e)));
-  }, [join, notify]);
+  }, [join, notify, search.invite, navigate]);
   useEffect(() => {
     const beat = () =>
       void heartbeat({
         session,
-        conversationId: selected ?? undefined,
+        conversationId: detail?._id,
         typing: false,
         online: true,
       }).catch((e) => notify(explain(e)));
@@ -70,13 +90,13 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
         /* Lease expiry is the crash fallback; no private data is retained here. */
       });
     };
-  }, [heartbeat, session, selected, notify]);
+  }, [heartbeat, session, detail?._id, notify]);
   function typing(value: boolean) {
     if (value && Date.now() - lastTyping.current < 2000) return;
     lastTyping.current = Date.now();
     void heartbeat({
       session,
-      conversationId: selected ?? undefined,
+      conversationId: detail?._id,
       typing: value,
       online: true,
     }).catch((e) => notify(explain(e)));
@@ -90,19 +110,16 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
             <a className="wordmark" href="/">
               Alloo.
             </a>
-            <button
-              type="button"
-              className="icon-button"
-              aria-label={dark ? "Passer au thème clair" : "Passer au thème sombre"}
-              onClick={() => {
-                const next = !dark;
-                setDark(next);
-                document.documentElement.dataset.theme = next ? "dark" : "light";
-                localStorage.setItem("alloo-theme", next ? "dark" : "light");
-              }}
+            <select
+              className="theme-select"
+              aria-label="Thème"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
             >
-              {dark ? <Sun size={19} /> : <Moon size={19} />}
-            </button>
+              <option value="system">Système</option>
+              <option value="light">Clair</option>
+              <option value="dark">Sombre</option>
+            </select>
           </div>
           <div className="sidebar-tools">
             <label>
@@ -230,9 +247,9 @@ export function Workspace({ profile }: { profile: Doc<"profiles"> }) {
       >
         <ProfileEditor profile={profile} onDone={() => setSettings(false)} />
       </Modal>
-      {info && selected && (
+      {info && detail && (
         <ConversationInfo
-          id={selected}
+          id={detail._id}
           userId={profile.userId}
           onClose={() => setInfo(false)}
           onLeave={() => {

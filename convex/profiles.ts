@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { cleanText, LIMITS, username } from "../shared/policy";
+import { providerAvatar } from "../shared/provider-avatar";
 import { mutation, query } from "./_generated/server";
 import { actor, publicProfile, quota } from "./access";
 
@@ -63,8 +64,11 @@ export const avatar = query({
       .query("profiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
-    if (!p?.avatar || p.deleted) return null;
-    // Private bytes are returned through an authenticated query, never a public storage URL.
-    return p.avatar;
+    if (!p || p.deleted) return null;
+    // Uploaded bytes use an authenticated action; provider images use a restricted HTTPS allowlist.
+    return {
+      storageId: p.avatar ?? null,
+      providerUrl: p.avatar ? null : providerAvatar((await ctx.db.get(userId))?.image),
+    };
   },
 });

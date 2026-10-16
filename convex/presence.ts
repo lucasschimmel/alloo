@@ -2,7 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { LIMITS } from "../shared/policy";
 import { mutation, query } from "./_generated/server";
-import { actor, member, quota } from "./access";
+import { actor, member, quota, readableMember } from "./access";
 export const heartbeat = mutation({
   args: {
     session: v.string(),
@@ -14,6 +14,11 @@ export const heartbeat = mutation({
     const userId = await actor(ctx);
     if (args.session.length > 100) throw new Error("INVALID_INPUT");
     await quota(ctx, userId, "presence", 120);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    if (profile) await ctx.db.patch(profile._id, { lastSeenAt: Date.now() });
     if (args.conversationId) await member(ctx, args.conversationId);
     const sessions = await ctx.db
       .query("presence")
@@ -41,7 +46,7 @@ export const list = query({
   args: { id: v.id("conversations") },
   handler: async (ctx, { id }) => {
     if (!(await getAuthUserId(ctx))) return [];
-    await member(ctx, id);
+    if (!(await readableMember(ctx, id))) return [];
     const members = await ctx.db
       .query("members")
       .withIndex("by_conversation", (q) => q.eq("conversationId", id))
@@ -54,6 +59,12 @@ export const list = query({
           .take(20);
         return {
           userId: m.userId,
+          lastSeenAt: (
+            await ctx.db
+              .query("profiles")
+              .withIndex("by_user", (q) => q.eq("userId", m.userId))
+              .unique()
+          )?.lastSeenAt,
           expiresAt: Math.max(0, ...sessions.map((s) => s.expiresAt)),
           typingUntil: Math.max(
             0,

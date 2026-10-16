@@ -362,3 +362,20 @@
   padding: 9px 20px;
   text-align: center;
 }
+.theme-select {
+  width: auto;
+  max-width: 115px;
+  font-size: 12px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--foreground);
+  background: var(--surface);
+}
+.profile-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 2px;
+  text-align: inherit;
+}

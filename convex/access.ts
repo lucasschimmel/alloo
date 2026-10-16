@@ -22,6 +22,20 @@ export async function member(ctx: QueryCtx, conversationId: Id<"conversations">)
   if (!row) throw new ConvexError("FORBIDDEN");
   return row;
 }
+// Reactive reads must tolerate access being revoked while a screen is mounted.
+export async function readableMember(ctx: QueryCtx, conversationId: Id<"conversations">) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) return null;
+  const profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .unique();
+  if (profile?.deleted) return null;
+  return ctx.db
+    .query("members")
+    .withIndex("by_pair", (q) => q.eq("conversationId", conversationId).eq("userId", userId))
+    .unique();
+}
 export async function admin(ctx: QueryCtx, conversationId: Id<"conversations">) {
   const row = await member(ctx, conversationId);
   if (row.role !== "admin") throw new ConvexError("FORBIDDEN");

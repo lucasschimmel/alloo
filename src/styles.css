@@ -4,3 +4,20 @@
 @import "./styles/messenger.css";
 @import "./styles/calls.css";
 @import "./styles/responsive.css";
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.emoji-grid button {
+  font-size: 24px;
+  min-height: 44px;
+}
+.date-separator {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 18px 0;
+}

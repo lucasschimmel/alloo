@@ -121,3 +121,19 @@
   color: var(--muted);
   line-height: 1.6;
 }
+.call-stage video.audio-only-media {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.audio-call-identity {
+  margin: auto;
+  text-align: center;
+}
+.audio-call-identity .avatar {
+  width: 96px;
+  height: 96px;
+  font-size: 32px;
+  margin: auto;
+}

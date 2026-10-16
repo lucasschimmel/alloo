@@ -11,12 +11,24 @@ export async function endCall(ctx: MutationCtx, call: Doc<"calls">, reason: stri
   await ctx.db.insert("messages", {
     conversationId: call.conversationId,
     userId: call.callerId,
-    body:
-      reason === "missed"
-        ? "Appel manqué"
-        : call.kind === "audio"
-          ? "Appel audio terminé"
-          : "Appel vidéo terminé",
+    body: "",
+    callData: {
+      callId: call._id,
+      kind: call.kind,
+      outcome:
+        reason === "missed"
+          ? "missed"
+          : reason === "declined"
+            ? "declined"
+            : reason === "canceled"
+              ? "canceled"
+              : reason === "expired" || reason === "connection-failed"
+                ? "interrupted"
+                : "completed",
+      durationSeconds: call.startedAt
+        ? Math.max(0, Math.floor((Date.now() - call.startedAt) / 1000))
+        : 0,
+    },
     operationId: `call:${call._id}`,
     kind: "call",
     pinned: false,

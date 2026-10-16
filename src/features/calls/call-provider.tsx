@@ -6,7 +6,9 @@ import { type ActorRefFrom, createActor } from "xstate";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { LIMITS } from "../../../shared/policy";
+import { Avatar } from "../../components/ui/avatar";
 import { explain } from "../../lib/errors";
+import { CallTimer, useCallSound } from "./call-feedback";
 import { callMachine } from "./call-machine";
 import { Peer } from "./peer";
 
@@ -62,8 +64,8 @@ export function CallProvider({
       machine.current = null;
     };
   }, []);
-  const endRef = useRef<() => void>(() => {});
-  function end() {
+  const endRef = useRef<(reason?: "connection-failed") => void>(() => {});
+  function end(reason?: "connection-failed") {
     generation.current++;
     pending.current = false;
     peer.current?.close();
@@ -73,8 +75,9 @@ export function CallProvider({
     setCallId(null);
     setRemote(null);
     processed.current.clear();
+    signalQueue.current = Promise.resolve();
     machine.current?.send({ type: "END" });
-    if (id) void hangupMutation({ id, session }).catch((e) => notify(explain(e)));
+    if (id) void hangupMutation({ id, session, reason }).catch((e) => notify(explain(e)));
   }
   endRef.current = end;
   useEffect(
@@ -161,10 +164,13 @@ export function CallProvider({
         connected: () => {
           if (attempt === generation.current) machine.current?.send({ type: "CONNECTED" });
         },
+        disconnected: () => {
+          if (attempt === generation.current) machine.current?.send({ type: "RECONNECT" });
+        },
         failed: (e) => {
           if (attempt === generation.current) {
             notify(explain(e));
-            endRef.current();
+            endRef.current("connection-failed");
           }
         },
       });
@@ -185,12 +191,22 @@ export function CallProvider({
       ? current
       : null;
   const local = peer.current?.local ?? null;
+  const sound = useCallSound(
+    incoming ? "incoming" : phase === "ringing" && call?.callerId === userId ? "outgoing" : null,
+  );
+  const person = call?.peer ?? incoming?.peer;
   return (
     <CallContext.Provider value={{ start: (id, kind) => begin(id, kind) }}>
       {children}
       {incoming && (
         <section className="incoming-call" aria-label="Appel entrant">
-          <h2>On vous dit Alloo.</h2>
+          <Avatar name={incoming.peer.name} userId={incoming.peer.userId} />
+          <h2>{incoming.peer.name} vous appelle.</h2>
+          {sound.blocked && (
+            <button type="button" onClick={sound.enable}>
+              Activer la sonnerie
+            </button>
+          )}
           <p>Un appel {incoming.kind === "audio" ? "audio" : "vidéo"} vous attend.</p>
           <div className="settings-actions">
             <button
@@ -223,27 +239,52 @@ export function CallProvider({
             <Dialog.Popup className="call-panel" aria-label="Appel en cours">
               <Dialog.Title className="sr-only">Appel en cours</Dialog.Title>
               <div className="call-top">
-                <span className="wordmark">Alloo</span>
+                <span className="wordmark">{person?.name ?? "Alloo"}</span>
+                {call?.startedAt && <CallTimer startedAt={call.startedAt} />}
+                {sound.blocked && (
+                  <button type="button" onClick={sound.enable}>
+                    Activer la sonnerie
+                  </button>
+                )}
                 <p role="status">
                   {phase === "preparing"
                     ? "Préparation du microphone…"
                     : phase === "ringing"
                       ? "En attente de votre correspondant…"
-                      : phase === "connecting"
-                        ? "Connexion…"
-                        : "Vous êtes en ligne"}
+                      : phase === "reconnecting"
+                        ? "Connexion interrompue · reconnexion en cours…"
+                        : phase === "connecting"
+                          ? "Connexion…"
+                          : "Vous êtes en ligne"}
                 </p>
               </div>
               <div className="call-stage">
                 {remote ? (
-                  <MediaVideo stream={remote} muted={false} />
+                  <MediaVideo
+                    stream={remote}
+                    muted={false}
+                    className={!remote.getVideoTracks().length ? "audio-only-media" : undefined}
+                  />
                 ) : (
                   <div className="empty-chat">
                     <Phone size={45} />
                     <h2>Un instant pour se retrouver.</h2>
                   </div>
                 )}
-                {local && <MediaVideo stream={local} muted className="local-video" />}
+                {remote && !remote.getVideoTracks().length && (
+                  <div className="audio-call-identity">
+                    <Avatar name={person?.name ?? "Correspondant"} userId={person?.userId} />
+                    <h2>{person?.name}</h2>
+                    <p>
+                      {local?.getAudioTracks()[0]?.enabled
+                        ? "Microphone activé"
+                        : "Microphone coupé"}
+                    </p>
+                  </div>
+                )}
+                {!!local?.getVideoTracks().length && (
+                  <MediaVideo stream={local} muted className="local-video" />
+                )}
               </div>
               <div className="call-controls">
                 <button
@@ -271,7 +312,12 @@ export function CallProvider({
                 >
                   <MonitorUp />
                 </button>
-                <button type="button" className="hangup" aria-label="Raccrocher" onClick={end}>
+                <button
+                  type="button"
+                  className="hangup"
+                  aria-label="Raccrocher"
+                  onClick={() => end()}
+                >
                   <PhoneOff />
                 </button>
               </div>
